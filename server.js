@@ -39,11 +39,27 @@ async function getGoogleAudio(text) {
 
 io.on('connection', (socket) => {
     let tiktok;
+    let startTime = 0; // Thời điểm bắt đầu nhấn kết nối
+
     socket.on('set-username', (username) => {
         if (tiktok) tiktok.disconnect();
+        
         tiktok = new WebcastPushConnection(username);
-        tiktok.connect().then(() => { socket.emit('status', `Đã kết nối: ${username}`); }).catch(err => { socket.emit('status', `Lỗi: ${err.message}`); });
+        startTime = Date.now(); // Ghi lại thời gian hiện tại
 
+        tiktok.connect().then(async () => {
+            socket.emit('status', `Đã kết nối: ${username}`);
+            
+            // 1. Tạo thông báo kết nối thành công bằng giọng nói
+            const notifyAudio = await getGoogleAudio("Kết nối thành công, bắt đầu đọc bình luận");
+            if (notifyAudio) {
+                socket.emit('audio-data', { type: 'system', user: "Hệ thống", comment: "Bắt đầu đọc bình luận...", audio: notifyAudio });
+            }
+        }).catch(err => {
+            socket.emit('status', `Lỗi: ${err.message}`);
+        });
+
+        // 2. Chào người mới (Chỉ chào người vào sau khi kết nối)
         tiktok.on('member', async (data) => {
             const welcomeText = `Bèo ơi, anh ${data.nickname} ghé chơi nè`;
             const audio = await getGoogleAudio(welcomeText);
@@ -52,11 +68,15 @@ io.on('connection', (socket) => {
             }
         });
 
+        // 3. Đọc bình luận (Chỉ đọc bình luận MỚI)
         tiktok.on('chat', async (data) => {
-            const cleanComment = replaceEmojis(data.comment);
-            const textToSpeak = `${data.nickname} nói: ${cleanComment}`;
-            const audio = await getGoogleAudio(textToSpeak);
-            socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: data.comment, audio: audio });
+            // Kiểm tra nếu bình luận đến sau thời điểm kết nối thì mới đọc
+            if (Date.now() > startTime) {
+                const cleanComment = replaceEmojis(data.comment);
+                const textToSpeak = `${data.nickname} nói: ${cleanComment}`;
+                const audio = await getGoogleAudio(textToSpeak);
+                socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: data.comment, audio: audio });
+            }
         });
     });
 });
