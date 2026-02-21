@@ -2,59 +2,55 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>TikTok Live TTS - Chị Google</title>
+    <title>TikTok TTS - Chị Google chuẩn</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
-        .container { max-width: 500px; margin: auto; background: #1e1e1e; padding: 25px; border-radius: 15px; border: 2px solid #fe2c55; }
-        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: white; }
-        button { width: 85%; padding: 15px; background: #fe2c55; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        #status { margin: 15px 0; color: #00f2ea; font-weight: bold; }
-        #chat-box { height: 350px; overflow-y: auto; background: #000; margin-top: 15px; padding: 15px; text-align: left; border-radius: 10px; border: 1px solid #333; display: flex; flex-direction: column-reverse; }
-        .msg { margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 5px; font-size: 14px; }
-        .user { color: #fe2c55; font-weight: bold; }
+        .box { max-width: 500px; margin: auto; background: #1e1e1e; padding: 25px; border-radius: 15px; border: 2px solid #fe2c55; }
+        input { width: 80%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #333; background: #000; color: white; }
+        button { width: 85%; padding: 15px; background: #fe2c55; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        #chat { height: 350px; overflow-y: auto; background: #000; margin-top: 15px; padding: 15px; text-align: left; border-radius: 10px; display: flex; flex-direction: column-reverse; }
+        .msg { margin-bottom: 8px; border-bottom: 1px solid #222; font-size: 14px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>TIKTOK LIVE - CHỊ GOOGLE</h2>
-        <input type="text" id="username" placeholder="Nhập Username TikTok">
-        <button onclick="connect()">KẾT NỐI & BẬT LOA</button>
-        <div id="status">Trạng thái: Sẵn sàng</div>
-        <div id="chat-box"></div>
+    <div class="box">
+        <h2>TIKTOK LIVE TTS</h2>
+        <input type="text" id="user" placeholder="Username TikTok">
+        <button onclick="start()">KẾT NỐI VÀ ĐỌC ICON</button>
+        <p id="stt">Trạng thái: Sẵn sàng</p>
+        <div id="chat"></div>
     </div>
     <script>
         const socket = io();
-        let queue = [];
-        let isPlaying = false;
+        let queue = [], playing = false;
 
-        function connect() {
-            const user = document.getElementById('username').value.trim();
-            socket.emit('set-username', user);
-            document.getElementById('status').innerText = "Đang kết nối...";
+        function start() {
+            socket.emit('set-username', document.getElementById('user').value);
+            document.getElementById('stt').innerText = "Đang kết nối...";
         }
 
-        socket.on('status', msg => document.getElementById('status').innerText = msg);
+        socket.on('status', m => document.getElementById('stt').innerText = m);
 
-        socket.on('audio-comment', data => {
+        socket.on('audio-data', d => {
             const div = document.createElement('div');
             div.className = 'msg';
-            div.innerHTML = `<span class="user">${data.user}:</span> ${data.comment}`;
-            document.getElementById('chat-box').prepend(div);
+            div.innerHTML = `<b style="color:#fe2c55">${d.user}:</b> ${d.comment}`;
+            document.getElementById('chat').prepend(div);
 
-            if (data.audioSrc) {
-                queue.push(data.audioSrc);
-                if (!isPlaying) playNext();
+            if (d.audio) {
+                queue.push(d.audio);
+                if (!playing) play();
             }
         });
 
-        function playNext() {
-            if (queue.length === 0) { isPlaying = false; return; }
-            isPlaying = true;
-            const audio = new Audio(queue.shift());
-            audio.onended = () => setTimeout(playNext, 300);
-            audio.onerror = () => { isPlaying = false; playNext(); };
-            audio.play().catch(() => { isPlaying = false; playNext(); });
+        function play() {
+            if (!queue.length) { playing = false; return; }
+            playing = true;
+            const a = new Audio(queue.shift());
+            a.onended = () => setTimeout(play, 300);
+            a.onerror = () => { playing = false; play(); };
+            a.play().catch(() => { playing = false; play(); });
         }
     </script>
 </body>
