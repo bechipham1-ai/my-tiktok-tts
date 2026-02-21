@@ -1,7 +1,7 @@
 {
   "name": "tiktok-tts-google",
   "version": "1.0.0",
-  "description": "TikTok Live TTS with Google Voice",
+  "description": "TikTok Live TTS with Google Voice and Custom Emoji",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
