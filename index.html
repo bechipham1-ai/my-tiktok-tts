@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>TikTok TTS - Chị Google chuẩn</title>
+    <title>TikTok Live TTS - Full Features</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
@@ -10,14 +10,15 @@
         input { width: 80%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #333; background: #000; color: white; }
         button { width: 85%; padding: 15px; background: #fe2c55; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         #chat { height: 350px; overflow-y: auto; background: #000; margin-top: 15px; padding: 15px; text-align: left; border-radius: 10px; display: flex; flex-direction: column-reverse; }
-        .msg { margin-bottom: 8px; border-bottom: 1px solid #222; font-size: 14px; }
+        .msg { margin-bottom: 8px; border-bottom: 1px solid #222; font-size: 14px; line-height: 1.4; }
+        #stt { color: #00f2ea; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="box">
         <h2>TIKTOK LIVE TTS</h2>
-        <input type="text" id="user" placeholder="Username TikTok">
-        <button onclick="start()">KẾT NỐI VÀ ĐỌC ICON</button>
+        <input type="text" id="user" placeholder="Nhập Username TikTok">
+        <button onclick="start()">KẾT NỐI VÀ BẬT ĐỌC</button>
         <p id="stt">Trạng thái: Sẵn sàng</p>
         <div id="chat"></div>
     </div>
@@ -26,7 +27,9 @@
         let queue = [], playing = false;
 
         function start() {
-            socket.emit('set-username', document.getElementById('user').value);
+            const username = document.getElementById('user').value;
+            if(!username) return alert("Vui lòng nhập ID!");
+            socket.emit('set-username', username);
             document.getElementById('stt').innerText = "Đang kết nối...";
         }
 
