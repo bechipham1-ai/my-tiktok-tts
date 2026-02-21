@@ -1,7 +1,7 @@
 {
-  "name": "tiktok-tts-final",
+  "name": "tiktok-tts-tingting",
   "version": "1.0.0",
-  "description": "TikTok Live TTS with Google Voice, Emoji and Welcome",
+  "description": "TikTok Live TTS - Google Voice with Ting Ting Sound",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
