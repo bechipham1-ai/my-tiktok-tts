@@ -2,8 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Live TTS - Giọng Nữ Chuẩn</title>
+    <title>TikTok TTS - Giọng Chị Google Chuẩn</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
@@ -11,7 +10,7 @@
         input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: white; font-size: 16px; }
         button { width: 85%; padding: 15px; background: #fe2c55; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; }
         #log-status { margin: 15px 0; color: #00f2ea; font-size: 14px; min-height: 20px; }
-        #chat-box { height: 300px; overflow-y: auto; background: #000; margin-top: 15px; padding: 15px; text-align: left; border-radius: 10px; border: 1px solid #333; display: flex; flex-direction: column-reverse; }
+        #chat-box { height: 350px; overflow-y: auto; background: #000; margin-top: 15px; padding: 15px; text-align: left; border-radius: 10px; border: 1px solid #333; display: flex; flex-direction: column-reverse; }
         .msg { margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 5px; font-size: 14px; }
         .user { color: #fe2c55; font-weight: bold; }
     </style>
@@ -20,9 +19,10 @@
 
     <div class="box">
         <h2>TikTok Live TTS</h2>
+        <p style="font-size: 0.8em; color: #888;">Sử dụng giọng chị Google chuẩn</p>
         <input type="text" id="username" placeholder="Nhập ID TikTok (ví dụ: chipham1)">
-        <button onclick="connectAndInit()">KẾT NỐI & BẮT ĐẦU</button>
-        <div id="log-status">Thông báo: Sẵn sàng</div>
+        <button onclick="startSystem()">KẾT NỐI & KÍCH HOẠT</button>
+        <div id="log-status">Trạng thái: Sẵn sàng</div>
         <div id="chat-box"></div>
     </div>
 
@@ -30,15 +30,14 @@
         const socket = io();
         let commentQueue = [];
         let isSpeaking = false;
-        const API_KEY = "7f113a9430734799ab8825f295a4534f";
         const statusLog = document.getElementById('log-status');
 
-        function connectAndInit() {
+        function startSystem() {
             const user = document.getElementById('username').value.trim();
             if (!user) return alert("Vui lòng nhập ID TikTok!");
             
-            // Âm thanh thông báo khởi động
-            playAudio("Hệ thống bắt đầu hoạt động. Đang kết nối tới " + user);
+            // Câu chào kích hoạt âm thanh
+            speak("Bắt đầu kết nối với chị Google");
 
             socket.emit('set-username', user);
             statusLog.innerText = "Đang kết nối tới TikTok...";
@@ -49,20 +48,16 @@
         });
 
         socket.on('new-comment', data => {
-            // Hiển thị lên màn hình
             const div = document.createElement('div');
             div.className = 'msg';
             div.innerHTML = `<span class="user">${data.user}:</span> ${data.comment}`;
             document.getElementById('chat-box').prepend(div);
 
-            // Thêm nội dung vào hàng đợi đọc
-            // Lọc bỏ các ký tự lạ để tránh lỗi API
-            const cleanUser = data.user.replace(/[^\w\sàáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệđìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵ]/gi, "");
-            const textToRead = `${cleanUser} nói: ${data.comment}`;
-            
+            // Cho nội dung vào hàng đợi
+            const textToRead = `${data.user} nói: ${data.comment}`;
             commentQueue.push(textToRead);
             
-            // Nếu không có ai đang nói thì bắt đầu xử lý hàng đợi
+            // Nếu đang không nói thì bắt đầu đọc
             if (!isSpeaking) {
                 processQueue();
             }
@@ -71,35 +66,36 @@
         function processQueue() {
             if (commentQueue.length === 0) {
                 isSpeaking = false;
-                statusLog.innerText = "Trạng thái: Đang chờ comment mới...";
+                statusLog.innerText = "Đang chờ comment mới...";
                 return;
             }
 
             isSpeaking = true;
-            const nextText = commentQueue.shift();
-            playAudio(nextText);
+            const text = commentQueue.shift();
+            speak(text);
         }
 
-        function playAudio(text) {
-            // API Voice RSS: hl=vi-vn (ngôn ngữ), v=Chi (Giọng nữ), r=0 (tốc độ bình thường)
-            const url = `https://api.voicerss.org/?key=${API_KEY}&hl=vi-vn&v=Chi&src=${encodeURIComponent(text)}&f=44khz_16bit_stereo`;
+        function speak(text) {
+            // Sử dụng link Google Translate TTS chuẩn
+            // tl=vi là tiếng Việt, client=tw-ob để lách chặn
+            const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`;
             
             const audio = new Audio(url);
-            statusLog.innerText = "Đang đọc: " + text;
+            statusLog.innerText = "Chị Google đang đọc...";
 
             audio.onended = () => {
-                // Khi đọc xong hoàn toàn câu này mới gọi câu tiếp theo sau 0.5s nghỉ
-                setTimeout(processQueue, 500);
+                // Nghỉ 0.3 giây rồi đọc câu tiếp theo để tránh bị dính chữ
+                setTimeout(processQueue, 300);
             };
 
-            audio.onerror = (e) => {
-                console.error("Lỗi âm thanh:", e);
+            audio.onerror = () => {
+                console.error("Lỗi Google TTS, bỏ qua câu này.");
                 isSpeaking = false;
                 processQueue();
             };
 
             audio.play().catch(err => {
-                console.warn("Trình duyệt chặn tự động phát:", err);
+                console.warn("Trình duyệt chặn âm thanh, vui lòng nhấn nút Kết nối lại.");
                 isSpeaking = false;
                 processQueue();
             });
