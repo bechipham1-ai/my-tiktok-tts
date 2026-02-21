@@ -2,43 +2,49 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>TikTok TTS - Fix Giọng Việt 100%</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok Live TTS - Giọng Việt Chuẩn 100%</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: 'Arial', sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
-        .box { max-width: 450px; margin: auto; background: #1e1e1e; padding: 25px; border-radius: 15px; border: 2px solid #fe2c55; }
-        input { width: 80%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: white; }
-        button { width: 85%; padding: 15px; background: #fe2c55; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        #status { margin: 15px 0; color: #00f2ea; }
-        #chat-box { height: 300px; overflow-y: auto; background: #000; margin-top: 15px; padding: 15px; text-align: left; border-radius: 10px; border: 1px solid #333; display: flex; flex-direction: column-reverse; }
-        .msg { margin-bottom: 8px; border-bottom: 1px solid #222; padding-bottom: 5px; font-size: 14px; }
-        .user { color: #fe2c55; font-weight: bold; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .box { width: 100%; max-width: 500px; background: #1e1e1e; padding: 25px; border-radius: 20px; border: 2px solid #fe2c55; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { color: #fe2c55; text-align: center; margin-bottom: 25px; text-transform: uppercase; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: white; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 15px; background: #fe2c55; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.3s; }
+        button:hover { background: #ef2950; transform: scale(1.02); }
+        #status { margin: 15px 0; color: #25f4ee; font-weight: bold; text-align: center; }
+        #chat-box { height: 350px; overflow-y: auto; background: #000; margin-top: 15px; padding: 15px; text-align: left; border-radius: 10px; border: 1px solid #333; display: flex; flex-direction: column-reverse; }
+        .msg { margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 5px; font-size: 15px; line-height: 1.5; animation: fadeIn 0.3s ease; }
+        .user { color: #fe2c55; font-weight: bold; margin-right: 5px; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
 
     <div class="box">
         <h2>TikTok Live TTS</h2>
-        <input type="text" id="username" placeholder="ID TikTok (ví dụ: chipham1)">
-        <button onclick="initAudio()">BẤT ĐẦU & NGHE TIẾNG VIỆT</button>
+        <input type="text" id="username" placeholder="Nhập ID TikTok (ví dụ: chipham1)">
+        <button onclick="initSystem()">KẾT NỐI & BẮT ĐẦU ĐỌC</button>
         <p id="status">Trạng thái: Sẵn sàng</p>
-        <div id="chat-box"></div>
+        
+        <div id="chat-box">
+            </div>
     </div>
-
-    <audio id="tts-audio" style="display:none;"></audio>
 
     <script>
         const socket = io();
         let queue = [];
         let isSpeaking = false;
-        const audioElement = document.getElementById('tts-audio');
+        
+        // API Key của bạn đã được dán sẵn ở đây
+        const API_KEY = "7f113a9430734799ab8825f295a4534f";
 
-        function initAudio() {
+        function initSystem() {
             const user = document.getElementById('username').value.trim();
-            if (!user) return alert("Nhập ID TikTok!");
+            if (!user) return alert("Vui lòng nhập ID TikTok!");
             
-            // Kích hoạt âm thanh (bắt buộc tương tác để không bị chặn)
-            playGoogleTTS("Hệ thống đã sẵn sàng");
+            // Âm thanh mồi để trình duyệt cấp quyền phát tiếng
+            playTTS("Hệ thống đã sẵn sàng đọc bình luận tiếng Việt");
 
             socket.emit('set-username', user);
             document.getElementById('status').innerText = "Đang kết nối tới: " + user;
@@ -49,13 +55,18 @@
         });
 
         socket.on('new-comment', data => {
+            // Hiển thị lên giao diện
             const div = document.createElement('div');
             div.className = 'msg';
             div.innerHTML = `<span class="user">${data.user}:</span> ${data.comment}`;
             document.getElementById('chat-box').prepend(div);
 
+            // Thêm vào hàng đợi đọc (đọc cả tên và nội dung)
             queue.push(`${data.user} nói ${data.comment}`);
-            if (!isSpeaking) processQueue();
+            
+            if (!isSpeaking) {
+                processQueue();
+            }
         });
 
         function processQueue() {
@@ -65,39 +76,32 @@
             }
 
             isSpeaking = true;
-            const text = queue.shift();
-            playGoogleTTS(text);
+            const textToSpeak = queue.shift();
+            playTTS(textToSpeak);
         }
 
-        function playGoogleTTS(text) {
-            // ÉP BUỘC SỬ DỤNG LINK GOOGLE VỚI HEADER VIỆT NAM
-            // Dùng tham số &tl=vi và &client=tw-ob để ép giọng nữ Việt
-            const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob&total=1&idx=0&textlen=${text.length}`;
+        function playTTS(text) {
+            // Sử dụng Voice RSS với ngôn ngữ vi-vn và giọng nữ (Chi)
+            const url = `https://api.voicerss.org/?key=${API_KEY}&hl=vi-vn&v=Chi&r=0&src=${encodeURIComponent(text)}`;
             
-            audioElement.src = url;
-            audioElement.load();
+            const audio = new Audio(url);
             
-            audioElement.onended = () => {
-                isSpeaking = false;
+            audio.onended = () => {
+                // Đợi 200ms rồi mới đọc câu tiếp theo cho tự nhiên
                 setTimeout(processQueue, 200);
             };
 
-            audioElement.onerror = () => {
-                console.error("Lỗi audio");
+            audio.onerror = () => {
+                console.error("Lỗi âm thanh, đang bỏ qua câu này...");
                 isSpeaking = false;
                 processQueue();
             };
 
-            // Phát âm thanh
-            var playPromise = audioElement.play();
-            
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.log("Phát audio thất bại, đang thử lại...");
-                    isSpeaking = false;
-                    processQueue();
-                });
-            }
+            audio.play().catch(err => {
+                console.error("Trình duyệt chặn phát tự động:", err);
+                isSpeaking = false;
+                processQueue();
+            });
         }
     </script>
 </body>
