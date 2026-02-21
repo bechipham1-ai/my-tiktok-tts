@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TikTok TTS Free</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
+        #chat-box { height: 300px; border: 1px solid #ccc; overflow-y: auto; background: white; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h2>TikTok TTS Miễn Phí</h2>
+    <input type="text" id="user" placeholder="Nhập username TikTok">
+    <button onclick="start()">Bắt đầu</button>
+    <p id="status"></p>
+    <div id="chat-box"></div>
+
+    <script>
+        const socket = io();
+        let queue = [];
+        let isSpeaking = false;
+
+        function start() {
+            const user = document.getElementById('user').value;
+            socket.emit('set-username', user);
+        }
+
+        socket.on('status', msg => {
+            document.getElementById('status').innerText = msg;
+        });
+
+        socket.on('new-comment', data => {
+            // Hiển thị lên màn hình
+            const div = document.createElement('p');
+            div.innerHTML = `<b>${data.user}:</b> ${data.comment}`;
+            document.getElementById('chat-box').prepend(div);
+
+            // Thêm vào hàng đợi để đọc
+            queue.push(`${data.user} nói là ${data.comment}`);
+            processQueue();
+        });
+
+        function processQueue() {
+            if (isSpeaking || queue.length === 0) return;
+
+            isSpeaking = true;
+            const text = queue.shift();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'vi-VN';
+
+            utterance.onend = () => {
+                isSpeaking = false;
+                processQueue(); // Đọc câu tiếp theo
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+    </script>
+</body>
+</html>
