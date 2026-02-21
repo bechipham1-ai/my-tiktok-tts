@@ -2,107 +2,88 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Live TTS - Giọng Chị Google Chuẩn</title>
+    <title>TikTok Live TTS - Fix Giọng Chuẩn</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { width: 100%; max-width: 500px; background: #1e1e1e; padding: 25px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.7); border: 1px solid #333; }
-        h2 { color: #fe2c55; text-align: center; margin-bottom: 25px; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
-        .input-group { margin-bottom: 20px; }
-        input { width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #444; background: #2b2b2b; color: white; box-sizing: border-box; font-size: 16px; outline: none; }
-        input:focus { border-color: #fe2c55; }
-        button { width: 100%; padding: 15px; border-radius: 10px; border: none; background: #fe2c55; color: white; font-weight: bold; font-size: 16px; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(254, 44, 85, 0.3); }
-        button:hover { background: #ef2950; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(254, 44, 85, 0.4); }
-        #status { font-size: 0.9em; text-align: center; margin: 15px 0; color: #00f2ea; font-weight: 500; }
-        #chat-box { height: 350px; border: 1px solid #333; overflow-y: auto; background: #000; padding: 15px; border-radius: 12px; margin-top: 10px; display: flex; flex-direction: column-reverse; }
-        .comment { margin-bottom: 12px; padding: 10px; border-radius: 8px; background: #1a1a1a; border-left: 4px solid #fe2c55; animation: slideIn 0.3s ease; line-height: 1.4; }
-        .user { color: #fe2c55; font-weight: bold; margin-right: 5px; display: block; font-size: 0.85em; margin-bottom: 3px; }
-        .text { color: #e0e0e0; font-size: 0.95em; }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
-        /* Tùy chỉnh thanh cuộn */
-        #chat-box::-webkit-scrollbar { width: 5px; }
-        #chat-box::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
+        .box { max-width: 500px; margin: auto; background: #1e1e1e; padding: 20px; border-radius: 15px; border: 1px solid #fe2c55; }
+        input { width: 80%; padding: 10px; margin: 10px; border-radius: 5px; border: none; }
+        button { padding: 10px 20px; background: #fe2c55; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        #chat-box { height: 300px; overflow-y: auto; background: #000; margin-top: 20px; padding: 10px; text-align: left; border-radius: 5px; }
+        .msg { margin-bottom: 8px; border-bottom: 1px solid #222; padding-bottom: 5px; font-size: 14px; }
+        .user { color: #25f4ee; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>TikTok Live TTS</h2>
-        <div class="input-group">
-            <input type="text" id="username" placeholder="Nhập username (không cần @)">
-        </div>
-        <button onclick="startConnection()">BẮT ĐẦU KẾT NỐI</button>
-        <p id="status">Trạng thái: Sẵn sàng</p>
+    <div class="box">
+        <h2>TikTok TTS - Giọng Chị Google</h2>
+        <input type="text" id="username" placeholder="Nhập ID TikTok (ví dụ: chipham1)">
+        <br>
+        <button onclick="start()">KẾT NỐI & ĐỌC</button>
+        <p id="status" style="color: #aaa;">Trạng thái: Sẵn sàng</p>
         
-        <div id="chat-box">
-            </div>
+        <div id="chat-box"></div>
     </div>
 
     <script>
         const socket = io();
         let queue = [];
         let isSpeaking = false;
-        const chatBox = document.getElementById('chat-box');
-        const statusText = document.getElementById('status');
 
-        // Hàm này bắt buộc kích hoạt bởi người dùng để trình duyệt cho phép phát âm thanh
-        function startConnection() {
+        function start() {
             const user = document.getElementById('username').value.trim();
-            if (!user) return alert("Vui lòng nhập Username TikTok!");
+            if (!user) return alert("Nhập ID đã!");
             
-            // Âm thanh mồi để trình duyệt cấp quyền
-            const welcome = new Audio("https://translate.google.com/translate_tts?ie=UTF-8&q=Bat+dau+ket+noi&tl=vi&client=tw-ob");
-            welcome.play().catch(e => console.log("Cần click để phát âm thanh"));
+            // Kích hoạt âm thanh mồi
+            playGoogleTTS("Đã bắt đầu kết nối");
 
             socket.emit('set-username', user);
-            statusText.innerText = "Trạng thái: Đang tìm phòng live...";
+            document.getElementById('status').innerText = "Đang kết nối...";
         }
 
         socket.on('status', msg => {
-            statusText.innerText = `Trạng thái: ${msg}`;
+            document.getElementById('status').innerText = "Trạng thái: " + msg;
         });
 
         socket.on('new-comment', data => {
-            // 1. Hiển thị UI
+            // Hiện lên màn hình
             const div = document.createElement('div');
-            div.className = 'comment';
-            div.innerHTML = `<span class="user">${data.user}</span><span class="text">${data.comment}</span>`;
-            chatBox.prepend(div);
+            div.className = 'msg';
+            div.innerHTML = `<span class="user">${data.user}:</span> ${data.comment}`;
+            const box = document.getElementById('chat-box');
+            box.prepend(div);
 
-            // 2. Cho vào hàng đợi
-            queue.push(`${data.user} nói: ${data.comment}`);
+            // Thêm vào hàng đợi đọc
+            queue.push(`${data.user} nói ${data.comment}`);
             processQueue();
         });
 
         function processQueue() {
-            // Nếu đang đọc hoặc hàng đợi trống thì dừng
             if (isSpeaking || queue.length === 0) return;
 
             isSpeaking = true;
             const text = queue.shift();
-            
-            // SỬ DỤNG GOOGLE TRANSLATE API TRỰC TIẾP
-            // tl=vi là tiếng Việt, client=tw-ob để lách chính sách bảo mật
-            const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`;
-            const audio = new Audio(audioUrl);
+            playGoogleTTS(text);
+        }
 
+        function playGoogleTTS(text) {
+            // Dùng API Google Translate để lấy giọng chị Google chuẩn 100%
+            const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`;
+            const audio = new Audio(url);
+            
             audio.onended = () => {
                 isSpeaking = false;
-                setTimeout(processQueue, 150); // Nghỉ 0.15s rồi đọc tiếp
+                processQueue(); // Đọc câu tiếp theo
             };
 
-            audio.onerror = (e) => {
-                console.error("Lỗi âm thanh:", e);
+            audio.onerror = () => {
                 isSpeaking = false;
                 processQueue();
             };
 
-            // Ép tốc độ đọc nhanh hơn một xíu (nếu muốn)
-            audio.playbackRate = 1.1; 
-            
-            audio.play().catch(err => {
-                console.error("Trình duyệt chặn phát tự động:", err);
+            audio.play().catch(e => {
+                console.log("Chặn phát tự động: ", e);
                 isSpeaking = false;
                 processQueue();
             });
