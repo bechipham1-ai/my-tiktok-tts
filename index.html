@@ -2,87 +2,59 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TikTok Live TTS - Chị Google</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { width: 100%; max-width: 500px; background: #1e1e1e; padding: 20px; border-radius: 15px; border: 2px solid #fe2c55; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: #fe2c55; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; }
-        #status { margin: 15px 0; color: #00f2ea; font-weight: bold; font-size: 14px; }
-        #chat-box { height: 350px; overflow-y: auto; background: #000; margin-top: 15px; padding: 15px; border-radius: 10px; border: 1px solid #333; display: flex; flex-direction: column-reverse; }
-        .msg { margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 5px; font-size: 15px; line-height: 1.5; }
+        body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
+        .container { max-width: 500px; margin: auto; background: #1e1e1e; padding: 25px; border-radius: 15px; border: 2px solid #fe2c55; }
+        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: white; }
+        button { width: 85%; padding: 15px; background: #fe2c55; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        #status { margin: 15px 0; color: #00f2ea; font-weight: bold; }
+        #chat-box { height: 350px; overflow-y: auto; background: #000; margin-top: 15px; padding: 15px; text-align: left; border-radius: 10px; border: 1px solid #333; display: flex; flex-direction: column-reverse; }
+        .msg { margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 5px; font-size: 14px; }
         .user { color: #fe2c55; font-weight: bold; }
     </style>
 </head>
 <body>
-
     <div class="container">
-        <h2 style="text-align: center; color: #fe2c55;">TIKTOK LIVE TTS</h2>
-        <input type="text" id="username" placeholder="Nhập username TikTok (ví dụ: chipham1)">
-        <button onclick="connect()">KẾT NỐI VÀ BẬT GIỌNG ĐỌC</button>
+        <h2>TIKTOK LIVE - CHỊ GOOGLE</h2>
+        <input type="text" id="username" placeholder="Nhập Username TikTok">
+        <button onclick="connect()">KẾT NỐI & BẬT LOA</button>
         <div id="status">Trạng thái: Sẵn sàng</div>
         <div id="chat-box"></div>
     </div>
-
     <script>
         const socket = io();
-        let audioQueue = [];
+        let queue = [];
         let isPlaying = false;
 
         function connect() {
             const user = document.getElementById('username').value.trim();
-            if (!user) return alert("Vui lòng nhập Username!");
-            
-            // Âm thanh kích hoạt hệ thống
             socket.emit('set-username', user);
             document.getElementById('status').innerText = "Đang kết nối...";
         }
 
-        socket.on('status', msg => {
-            document.getElementById('status').innerText = "Trạng thái: " + msg;
-        });
+        socket.on('status', msg => document.getElementById('status').innerText = msg);
 
-        // Nhận comment kèm audio từ Server
         socket.on('audio-comment', data => {
-            // 1. Hiển thị text
             const div = document.createElement('div');
             div.className = 'msg';
             div.innerHTML = `<span class="user">${data.user}:</span> ${data.comment}`;
             document.getElementById('chat-box').prepend(div);
 
-            // 2. Thêm audio vào hàng đợi
-            audioQueue.push(data.audioSrc);
-            
-            // 3. Nếu đang không phát thì bắt đầu phát
-            if (!isPlaying) playNext();
+            if (data.audioSrc) {
+                queue.push(data.audioSrc);
+                if (!isPlaying) playNext();
+            }
         });
 
         function playNext() {
-            if (audioQueue.length === 0) {
-                isPlaying = false;
-                return;
-            }
-
+            if (queue.length === 0) { isPlaying = false; return; }
             isPlaying = true;
-            const audio = new Audio(audioQueue.shift());
-            
-            audio.onended = () => {
-                // Đọc xong, nghỉ 0.3 giây rồi đọc tiếp
-                setTimeout(playNext, 300);
-            };
-
-            audio.onerror = () => {
-                isPlaying = false;
-                playNext();
-            };
-
-            audio.play().catch(e => {
-                console.error("Lỗi phát âm thanh:", e);
-                isPlaying = false;
-                playNext();
-            });
+            const audio = new Audio(queue.shift());
+            audio.onended = () => setTimeout(playNext, 300);
+            audio.onerror = () => { isPlaying = false; playNext(); };
+            audio.play().catch(() => { isPlaying = false; playNext(); });
         }
     </script>
 </body>
