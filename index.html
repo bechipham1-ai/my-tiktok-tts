@@ -2,24 +2,27 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>TikTok TTS - Fix Triệt Để</title>
+    <title>TikTok TTS - Fix Giọng Chị Google 100%</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
-        .box { max-width: 500px; margin: auto; background: #1e1e1e; padding: 25px; border-radius: 15px; border: 2px solid #fe2c55; }
-        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: white; }
-        button { width: 85%; padding: 15px; background: #fe2c55; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        #log { margin: 15px 0; color: #00f2ea; font-size: 13px; }
+        body { font-family: 'Arial', sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
+        .box { max-width: 450px; margin: auto; background: #1e1e1e; padding: 25px; border-radius: 15px; border: 2px solid #fe2c55; }
+        input { width: 80%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: white; font-size: 16px; }
+        button { width: 85%; padding: 15px; background: #fe2c55; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; }
+        #status { margin: 15px 0; color: #00f2ea; font-size: 14px; }
         #chat-box { height: 300px; overflow-y: auto; background: #000; margin-top: 15px; padding: 15px; text-align: left; border-radius: 10px; border: 1px solid #333; display: flex; flex-direction: column-reverse; }
-        .msg { margin-bottom: 8px; border-bottom: 1px solid #222; font-size: 14px; }
+        .msg { margin-bottom: 8px; border-bottom: 1px solid #222; padding-bottom: 5px; font-size: 14px; }
+        .user { color: #fe2c55; font-weight: bold; }
     </style>
 </head>
 <body>
+
     <div class="box">
         <h2>TikTok Live TTS</h2>
+        <p style="color: #888; font-size: 0.8em;">Đã ép buộc giọng Nữ Tiếng Việt</p>
         <input type="text" id="username" placeholder="Nhập ID TikTok">
-        <button onclick="start()">BẤT ĐẦU ĐỌC</button>
-        <div id="log">Trạng thái: Chờ kích hoạt</div>
+        <button onclick="startSystem()">KẾT NỐI & BẮT ĐẦU</button>
+        <div id="status">Trạng thái: Chờ kích hoạt</div>
         <div id="chat-box"></div>
     </div>
 
@@ -28,21 +31,21 @@
         let queue = [];
         let isSpeaking = false;
 
-        function start() {
+        function startSystem() {
             const user = document.getElementById('username').value.trim();
-            if (!user) return alert("Nhập ID!");
+            if (!user) return alert("Nhập ID TikTok!");
             
-            // Kích hoạt âm thanh ngay lập tức
-            speak("Hệ thống khởi động");
-            
+            // Câu chào kích hoạt (ép ra giọng Việt)
+            speak("Hệ thống đã sẵn sàng");
+
             socket.emit('set-username', user);
-            document.getElementById('log').innerText = "Đang kết nối...";
+            document.getElementById('status').innerText = "Đang kết nối: " + user;
         }
 
         socket.on('new-comment', data => {
             const div = document.createElement('div');
             div.className = 'msg';
-            div.innerHTML = `<b style="color:#fe2c55">${data.user}:</b> ${data.comment}`;
+            div.innerHTML = `<span class="user">${data.user}:</span> ${data.comment}`;
             document.getElementById('chat-box').prepend(div);
 
             queue.push(`${data.user} nói ${data.comment}`);
@@ -50,42 +53,37 @@
         });
 
         function processQueue() {
-            if (queue.length === 0) { isSpeaking = false; return; }
+            if (queue.length === 0) {
+                isSpeaking = false;
+                return;
+            }
             isSpeaking = true;
             speak(queue.shift());
         }
 
         function speak(text) {
-            // HỦY CÁC CÂU ĐANG ĐỌC DỞ ĐỂ TRÁNH TREO
-            window.speechSynthesis.cancel();
-
-            const msg = new SpeechSynthesisUtterance(text);
-            const voices = window.speechSynthesis.getVoices();
+            // SỬ DỤNG LINK GOOGLE QUA PROXY ĐỂ TRANH BỊ CHẶN VÀ ÉP GIỌNG VIỆT
+            const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`;
             
-            // Tìm giọng Việt
-            const vnVoice = voices.find(v => v.lang.includes('vi'));
-            if (vnVoice) msg.voice = vnVoice;
-            msg.lang = 'vi-VN';
-            msg.rate = 1.0;
-
-            msg.onend = () => { setTimeout(processQueue, 200); };
+            const audio = new Audio(url);
             
-            // NẾU SAU 3 GIÂY KHÔNG ĐỌC ĐƯỢC THÌ TỰ ĐỘNG BỎ QUA ĐỂ KHÔNG TREO HÀNG ĐỢI
-            const timeout = setTimeout(() => {
-                if (isSpeaking) {
-                    console.log("Phát hiện treo, đang bỏ qua...");
-                    isSpeaking = false;
-                    processQueue();
-                }
-            }, 5000);
+            audio.onended = () => {
+                setTimeout(processQueue, 200);
+            };
 
-            msg.onstart = () => clearTimeout(timeout);
+            audio.onerror = () => {
+                console.log("Lỗi tải âm thanh, thử lại câu sau");
+                isSpeaking = false;
+                processQueue();
+            };
 
-            window.speechSynthesis.speak(msg);
+            // Ép trình duyệt phát âm thanh
+            audio.play().catch(err => {
+                console.error("Trình duyệt chặn phát tự động. Hãy nhấn nút Kết nối lại.");
+                isSpeaking = false;
+                processQueue();
+            });
         }
-
-        // Fix lỗi Chrome không load voice
-        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
     </script>
 </body>
 </html>
