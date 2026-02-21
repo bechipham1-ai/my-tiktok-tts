@@ -1,7 +1,7 @@
 {
-  "name": "tiktok-tts-tingting",
-  "version": "1.0.0",
-  "description": "TikTok Live TTS - Google Voice with Fresh Start and Welcome Voice",
+  "name": "tiktok-tts-fix",
+  "version": "1.0.1",
+  "description": "TikTok Live TTS - Fixed Rate Limit and Queue",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
