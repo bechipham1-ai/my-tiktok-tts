@@ -1,42 +1,70 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-    <title>TikTok TTS Free</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok Live TTS - Giọng Chị Google</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
-        #chat-box { height: 300px; border: 1px solid #ccc; overflow-y: auto; background: white; padding: 10px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { width: 100%; max-width: 500px; background: #1e1e1e; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { color: #fe2c55; text-align: center; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #2b2b2b; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #fe2c55; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #ef2950; transform: translateY(-2px); }
+        #status { font-size: 0.9em; text-align: center; margin: 10px 0; color: #aaa; }
+        #chat-box { height: 350px; border: 1px solid #333; overflow-y: auto; background: #000; padding: 15px; border-radius: 8px; margin-top: 15px; }
+        .comment { margin-bottom: 10px; padding: 8px; border-bottom: 1px solid #1a1a1a; animation: fadeIn 0.3s ease; }
+        .user { color: #25f4ee; font-weight: bold; margin-right: 5px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
-    <h2>TikTok TTS Miễn Phí</h2>
-    <input type="text" id="user" placeholder="Nhập username TikTok">
-    <button onclick="start()">Bắt đầu</button>
-    <p id="status"></p>
-    <div id="chat-box"></div>
+
+    <div class="container">
+        <h2>TikTok TTS Free</h2>
+        <input type="text" id="username" placeholder="Nhập username TikTok (ví dụ: khabanh_real)">
+        <button onclick="startConnection()">Kết nối & Bắt đầu đọc</button>
+        <p id="status">Trạng thái: Chưa kết nối</p>
+        
+        <div id="chat-box" id="chatBox">
+            <div style="color: #666; font-size: 0.8em;">Comment sẽ hiện ở đây...</div>
+        </div>
+    </div>
 
     <script>
         const socket = io();
         let queue = [];
         let isSpeaking = false;
+        const chatBox = document.getElementById('chat-box');
+        const statusText = document.getElementById('status');
 
-        function start() {
-            const user = document.getElementById('user').value;
+        function startConnection() {
+            const user = document.getElementById('username').value;
+            if (!user) return alert("Vui lòng nhập Username!");
+            
+            // Kích hoạt âm thanh (Trình duyệt yêu cầu tương tác người dùng)
+            const silent = new SpeechSynthesisUtterance("Đang kết nối");
+            silent.volume = 0;
+            window.speechSynthesis.speak(silent);
+
             socket.emit('set-username', user);
+            statusText.innerText = "Trạng thái: Đang kết nối...";
         }
 
         socket.on('status', msg => {
-            document.getElementById('status').innerText = msg;
+            statusText.innerText = `Trạng thái: ${msg}`;
         });
 
         socket.on('new-comment', data => {
-            // Hiển thị lên màn hình
-            const div = document.createElement('p');
-            div.innerHTML = `<b>${data.user}:</b> ${data.comment}`;
-            document.getElementById('chat-box').prepend(div);
+            // 1. Hiển thị lên màn hình
+            const div = document.createElement('div');
+            div.className = 'comment';
+            div.innerHTML = `<span class="user">${data.user}:</span> ${data.comment}`;
+            chatBox.prepend(div);
 
-            // Thêm vào hàng đợi để đọc
-            queue.push(`${data.user} nói là ${data.comment}`);
+            // 2. Thêm vào hàng đợi đọc
+            queue.push(`${data.user} nói: ${data.comment}`);
             processQueue();
         });
 
@@ -45,16 +73,45 @@
 
             isSpeaking = true;
             const text = queue.shift();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'vi-VN';
+            
+            // Ưu tiên dùng Web Speech API (Giọng mượt hơn)
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                
+                // Tìm giọng tiếng Việt
+                const voices = window.speechSynthesis.getVoices();
+                const vnVoice = voices.find(v => v.lang === 'vi-VN' || v.lang.includes('vi'));
 
-            utterance.onend = () => {
-                isSpeaking = false;
-                processQueue(); // Đọc câu tiếp theo
-            };
+                if (vnVoice) utterance.voice = vnVoice;
+                utterance.lang = 'vi-VN';
+                utterance.rate = 1.0;
+                
+                utterance.onend = () => {
+                    isSpeaking = false;
+                    setTimeout(processQueue, 200); // Nghỉ 0.2s rồi đọc tiếp
+                };
 
-            window.speechSynthesis.speak(utterance);
+                utterance.onerror = () => {
+                    isSpeaking = false;
+                    processQueue();
+                };
+
+                window.speechSynthesis.speak(utterance);
+            } else {
+                // Nếu trình duyệt lỗi, dùng link Google Translate dự phòng
+                const audio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`);
+                audio.onended = () => {
+                    isSpeaking = false;
+                    processQueue();
+                };
+                audio.play();
+            }
         }
+
+        // Fix lỗi danh sách giọng nói trống trên một số trình duyệt
+        window.speechSynthesis.onvoiceschanged = () => {
+            console.log("Giọng nói đã sẵn sàng");
+        };
     </script>
 </body>
 </html>
