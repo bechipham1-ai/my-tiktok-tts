@@ -9,43 +9,71 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Cấu hình để nhận diện file index.html nằm cùng thư mục
-app.use(express.static(__dirname));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Bảng chuyển đổi Icon sang tiếng Việt chuẩn
+const emojiMap = {
+    "❤️": "thả tim",
+    "😂": "cười ha ha",
+    "🤣": "cười đau bụng",
+    "😍": "mê quá",
+    "🥰": "thương thương",
+    "👍": "like",
+    "🙏": "cảm ơn",
+    "😭": "khóc quá trời",
+    "😘": "hôn gió",
+    "🔥": "quá cháy",
+    "👏": "vỗ tay",
+    "🌹": "tặng hoa hồng",
+    "🎁": "tặng quà"
+};
+
+function replaceEmojis(text) {
+    let newText = text;
+    // Thay thế các icon có trong bảng map
+    for (const [emoji, replacement] of Object.entries(emojiMap)) {
+        newText = newText.split(emoji).join(` ${replacement} `);
+    }
+    // Loại bỏ các icon lạ khác để tránh lỗi đọc
+    const emojiRegex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
+    return newText.replace(emojiRegex, "");
+}
 
 io.on('connection', (socket) => {
-    let tiktokConnection;
+    let tiktok;
 
     socket.on('set-username', (username) => {
-        if (tiktokConnection) tiktokConnection.disconnect();
-        tiktokConnection = new WebcastPushConnection(username);
+        if (tiktok) tiktok.disconnect();
+        tiktok = new WebcastPushConnection(username);
 
-        tiktokConnection.connect().then(state => {
+        tiktok.connect().then(() => {
             socket.emit('status', `Đã kết nối: ${username}`);
         }).catch(err => {
-            socket.emit('status', `Lỗi kết nối: ${err.message}`);
+            socket.emit('status', `Lỗi: ${err.message}`);
         });
 
-        tiktokConnection.on('chat', async (data) => {
+        tiktok.on('chat', async (data) => {
             try {
-                const text = `${data.nickname} nói: ${data.comment}`;
-                const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`;
+                const cleanComment = replaceEmojis(data.comment);
+                const textToSpeak = `${data.nickname} nói: ${cleanComment}`;
                 
-                // Server tải audio tránh bị chặn IP người dùng
-                const response = await axios.get(ttsUrl, { responseType: 'arraybuffer' });
-                const base64Audio = Buffer.from(response.data, 'binary').toString('base64');
+                const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(textToSpeak)}&tl=vi&client=tw-ob`;
+                
+                const response = await axios.get(url, { responseType: 'arraybuffer' });
+                const base64 = Buffer.from(response.data, 'binary').toString('base64');
 
-                io.emit('audio-comment', {
+                socket.emit('audio-data', {
                     user: data.nickname,
-                    comment: data.comment,
-                    audioSrc: `data:audio/mp3;base64,${base64Audio}`
+                    comment: data.comment, 
+                    audio: `data:audio/mp3;base64,${base64}`
                 });
-            } catch (error) {
-                io.emit('audio-comment', { user: data.nickname, comment: data.comment, audioSrc: null });
+            } catch (e) {
+                socket.emit('audio-data', { user: data.nickname, comment: data.comment, audio: null });
             }
         });
     });
-
-    socket.on('disconnect', () => { if (tiktokConnection) tiktokConnection.disconnect(); });
 });
 
 const PORT = process.env.PORT || 3000;
