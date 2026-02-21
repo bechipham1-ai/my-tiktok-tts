@@ -2,34 +2,28 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>TikTok TTS Pro Fix</title>
+    <title>TikTok TTS v2.0</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
-        .box { max-width: 500px; margin: auto; background: #1e1e1e; padding: 25px; border-radius: 15px; border: 2px solid #fe2c55; }
-        input { width: 85%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: white; }
-        button { width: 85%; padding: 15px; background: #fe2c55; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        #chat { height: 350px; overflow-y: auto; background: #000; margin-top: 15px; padding: 15px; text-align: left; border-radius: 10px; display: flex; flex-direction: column-reverse; }
-        .msg { margin-bottom: 8px; border-bottom: 1px solid #222; font-size: 14px; }
-        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
-        .switch input { opacity: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 22px; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #fe2c55; }
-        input:checked + .slider:before { transform: translateX(22px); }
+        body { font-family: sans-serif; background: #000; color: #fff; text-align: center; }
+        .box { max-width: 450px; margin: 20px auto; background: #111; padding: 20px; border-radius: 15px; border: 1px solid #fe2c55; }
+        input { width: 80%; padding: 10px; border-radius: 5px; border: none; margin-bottom: 10px; }
+        button { width: 85%; padding: 12px; background: #fe2c55; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        #chat { height: 400px; overflow-y: auto; background: #080808; margin-top: 15px; padding: 10px; border-radius: 8px; font-size: 13px; display: flex; flex-direction: column; text-align: left; }
+        .msg { padding: 5px; border-bottom: 1px solid #222; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
     </style>
 </head>
 <body>
     <div class="box">
-        <h2>TIKTOK TTS FIX</h2>
-        <input type="text" id="user" placeholder="Nhập ID TikTok">
+        <h3>TIKTOK LIVE TTS v2.0</h3>
+        <input type="text" id="user" placeholder="ID TikTok">
         <button onclick="start()">KẾT NỐI</button>
-        <div style="margin-top:15px; font-size:14px;">
-            Chào người mới: 
-            <label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label>
+        <div style="margin: 10px; font-size: 12px;">
+            Chào: <input type="checkbox" id="welcomeToggle" checked style="width:auto;">
         </div>
-        <p id="stt" style="color:#00f2ea">Sẵn sàng</p>
-        <div id="chat"></div>
+        <p id="stt" style="color:#00f2ea; font-size: 12px;">Sẵn sàng</p>
+        <div id="chat" id="chatbox"></div>
     </div>
 
     <script>
@@ -38,54 +32,49 @@
         const ting = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
 
         function start() {
-            socket.emit('set-username', document.getElementById('user').value.trim());
+            const u = document.getElementById('user').value.trim();
+            if(!u) return;
+            socket.emit('set-username', u);
             document.getElementById('stt').innerText = "Đang kết nối...";
+            document.getElementById('chat').innerHTML = ""; 
             queue = [];
         }
 
-        socket.on('status', m => document.getElementById('stt').innerText = m);
-
         socket.on('audio-data', d => {
-            // Luôn hiện text kể cả khi Google bị lỗi âm thanh
+            const chatBox = document.getElementById('chat');
+            
+            // 1. Hiển thị chữ và dọn dẹp bộ nhớ (giữ tối đa 50 dòng)
             const div = document.createElement('div');
             div.className = 'msg';
-            div.style.color = d.type === 'welcome' ? '#00f2ea' : (d.type === 'system' ? '#fe2c55' : 'white');
-            div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
-            document.getElementById('chat').prepend(div);
+            div.innerHTML = `<span style="color:#fe2c55"><b>${d.user}:</b></span> ${d.comment}`;
+            chatBox.insertBefore(div, chatBox.firstChild);
+            if (chatBox.children.length > 50) chatBox.removeChild(chatBox.lastChild);
 
+            // 2. Xử lý âm thanh
             if (d.audio) {
                 if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
                 if (d.type === 'welcome') queue.push('TING');
                 queue.push(d.audio);
                 if (!playing) play();
-            } else if (playing === false && queue.length > 0) {
-                // Nếu âm thanh bị null nhưng queue còn thì vẫn tiếp tục
-                play();
             }
         });
+
+        socket.on('status', m => document.getElementById('stt').innerText = m);
 
         function play() {
             if (!queue.length) { playing = false; return; }
             playing = true;
-            
             const item = queue.shift();
+
             if (item === 'TING') {
-                ting.play().then(() => {
-                    ting.onended = () => play();
-                }).catch(() => play());
+                ting.play().then(() => ting.onended = () => play()).catch(() => play());
             } else {
                 const a = new Audio(item);
-                // Xử lý lỗi: Nếu 3 giây không phát được thì bỏ qua câu này
-                const timeout = setTimeout(() => {
-                    console.log("Audio bị kẹt, đang nhảy câu...");
-                    a.pause();
-                    play();
-                }, 4000);
-
-                a.onplay = () => {};
-                a.onended = () => { clearTimeout(timeout); setTimeout(play, 200); };
-                a.onerror = () => { clearTimeout(timeout); play(); };
-                a.play().catch(() => { clearTimeout(timeout); play(); });
+                // Giới hạn thời gian phát mỗi câu tối đa 6 giây để không treo hàng đợi
+                const t = setTimeout(() => { a.pause(); play(); }, 6000);
+                a.onended = () => { clearTimeout(t); play(); };
+                a.onerror = () => { clearTimeout(t); play(); };
+                a.play().catch(() => { clearTimeout(t); play(); });
             }
         }
     </script>
