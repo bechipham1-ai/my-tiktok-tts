@@ -15,7 +15,7 @@ app.get('/', (req, res) => {
 
 // Bảng chuyển đổi Icon sang tiếng Việt
 const emojiMap = {
-    "❤️": "thả tim", "😂": "cười ha ha", "🤣": "cười đau bụng",
+    "❤️": "thả tim", "😂": "cười ha ha", "🤣": "cười chảy nước mắt",
     "😍": "mê quá", "🥰": "thương thương", "👍": "like",
     "🙏": "cảm ơn", "😭": "khóc quá trời", "😘": "hôn gió",
     "🔥": "quá cháy", "👏": "vỗ tay", "🌹": "tặng hoa hồng", "🎁": "tặng quà"
@@ -87,3 +87,4 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+
