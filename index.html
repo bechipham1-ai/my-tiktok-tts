@@ -2,109 +2,90 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>TikTok TTS - Fix 100% Giọng Việt</title>
+    <title>TikTok TTS - Fix Triệt Để</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
-        .box { max-width: 500px; margin: auto; background: #1e1e1e; padding: 25px; border-radius: 15px; border: 2px solid #fe2c55; box-shadow: 0 0 20px rgba(254,44,85,0.3); }
-        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: white; font-size: 16px; }
-        button { width: 85%; padding: 15px; background: #fe2c55; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.3s; }
-        button:hover { background: #ff4d6d; }
-        #log-status { margin: 15px 0; color: #00f2ea; font-size: 14px; min-height: 20px; }
-        #chat-box { height: 350px; overflow-y: auto; background: #000; margin-top: 15px; padding: 15px; text-align: left; border-radius: 10px; border: 1px solid #333; display: flex; flex-direction: column-reverse; }
-        .msg { margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 5px; font-size: 14px; }
-        .user { color: #fe2c55; font-weight: bold; }
+        body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
+        .box { max-width: 500px; margin: auto; background: #1e1e1e; padding: 25px; border-radius: 15px; border: 2px solid #fe2c55; }
+        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: white; }
+        button { width: 85%; padding: 15px; background: #fe2c55; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        #log { margin: 15px 0; color: #00f2ea; font-size: 13px; }
+        #chat-box { height: 300px; overflow-y: auto; background: #000; margin-top: 15px; padding: 15px; text-align: left; border-radius: 10px; border: 1px solid #333; display: flex; flex-direction: column-reverse; }
+        .msg { margin-bottom: 8px; border-bottom: 1px solid #222; font-size: 14px; }
     </style>
 </head>
 <body>
-
     <div class="box">
         <h2>TikTok Live TTS</h2>
-        <p style="font-size: 0.8em; color: #888;">Giọng chị Google (Bản không bị chặn)</p>
-        <input type="text" id="username" placeholder="Nhập ID TikTok (ví dụ: chipham1)">
-        <button onclick="startSystem()">KẾT NỐI & KÍCH HOẠT</button>
-        <div id="log-status">Trạng thái: Chờ kích hoạt</div>
+        <input type="text" id="username" placeholder="Nhập ID TikTok">
+        <button onclick="start()">BẤT ĐẦU ĐỌC</button>
+        <div id="log">Trạng thái: Chờ kích hoạt</div>
         <div id="chat-box"></div>
     </div>
 
     <script>
         const socket = io();
-        let commentQueue = [];
+        let queue = [];
         let isSpeaking = false;
-        const statusLog = document.getElementById('log-status');
 
-        // Hàm lấy giọng đọc chuẩn Tiếng Việt của Google trong trình duyệt
-        function getVietnameseVoice() {
-            const voices = window.speechSynthesis.getVoices();
-            // Ưu tiên tìm giọng "Google Tiếng Việt"
-            return voices.find(v => v.name.includes('Google') && (v.lang === 'vi-VN' || v.lang === 'vi_VN')) 
-                   || voices.find(v => v.lang === 'vi-VN' || v.lang === 'vi_VN');
-        }
-
-        // Ép trình duyệt nạp danh sách giọng nói
-        window.speechSynthesis.onvoiceschanged = () => getVietnameseVoice();
-
-        function startSystem() {
+        function start() {
             const user = document.getElementById('username').value.trim();
-            if (!user) return alert("Vui lòng nhập ID TikTok!");
+            if (!user) return alert("Nhập ID!");
             
-            // Câu chào kích hoạt âm thanh
-            speak("Hệ thống đã sẵn sàng. Đang kết nối.");
-
+            // Kích hoạt âm thanh ngay lập tức
+            speak("Hệ thống khởi động");
+            
             socket.emit('set-username', user);
-            statusLog.innerText = "Đang kết nối tới TikTok...";
+            document.getElementById('log').innerText = "Đang kết nối...";
         }
-
-        socket.on('status', msg => {
-            statusLog.innerText = "Trạng thái: " + msg;
-        });
 
         socket.on('new-comment', data => {
             const div = document.createElement('div');
             div.className = 'msg';
-            div.innerHTML = `<span class="user">${data.user}:</span> ${data.comment}`;
+            div.innerHTML = `<b style="color:#fe2c55">${data.user}:</b> ${data.comment}`;
             document.getElementById('chat-box').prepend(div);
 
-            const textToRead = `${data.user} nói: ${data.comment}`;
-            commentQueue.push(textToRead);
-            
+            queue.push(`${data.user} nói ${data.comment}`);
             if (!isSpeaking) processQueue();
         });
 
         function processQueue() {
-            if (commentQueue.length === 0) {
-                isSpeaking = false;
-                return;
-            }
+            if (queue.length === 0) { isSpeaking = false; return; }
             isSpeaking = true;
-            const text = commentQueue.shift();
-            speak(text);
+            speak(queue.shift());
         }
 
         function speak(text) {
-            // Sử dụng Web Speech API có sẵn trong trình duyệt (Không sợ bị Google API chặn)
-            const utterance = new SpeechSynthesisUtterance(text);
-            const vnVoice = getVietnameseVoice();
+            // HỦY CÁC CÂU ĐANG ĐỌC DỞ ĐỂ TRÁNH TREO
+            window.speechSynthesis.cancel();
 
-            if (vnVoice) {
-                utterance.voice = vnVoice;
-            }
+            const msg = new SpeechSynthesisUtterance(text);
+            const voices = window.speechSynthesis.getVoices();
             
-            utterance.lang = 'vi-VN';
-            utterance.rate = 1.0; // Tốc độ đọc
-            utterance.pitch = 1.0; // Độ cao
+            // Tìm giọng Việt
+            const vnVoice = voices.find(v => v.lang.includes('vi'));
+            if (vnVoice) msg.voice = vnVoice;
+            msg.lang = 'vi-VN';
+            msg.rate = 1.0;
 
-            utterance.onend = () => {
-                setTimeout(processQueue, 300); // Đọc xong nghỉ 0.3s rồi đọc tiếp
-            };
+            msg.onend = () => { setTimeout(processQueue, 200); };
+            
+            // NẾU SAU 3 GIÂY KHÔNG ĐỌC ĐƯỢC THÌ TỰ ĐỘNG BỎ QUA ĐỂ KHÔNG TREO HÀNG ĐỢI
+            const timeout = setTimeout(() => {
+                if (isSpeaking) {
+                    console.log("Phát hiện treo, đang bỏ qua...");
+                    isSpeaking = false;
+                    processQueue();
+                }
+            }, 5000);
 
-            utterance.onerror = () => {
-                isSpeaking = false;
-                processQueue();
-            };
+            msg.onstart = () => clearTimeout(timeout);
 
-            window.speechSynthesis.speak(utterance);
+            window.speechSynthesis.speak(msg);
         }
+
+        // Fix lỗi Chrome không load voice
+        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
     </script>
 </body>
 </html>
