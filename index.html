@@ -2,46 +2,74 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>TikTok Live TTS - Full Features</title>
+    <title>TikTok Live TTS - Google Voice Ting Ting</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
         .box { max-width: 500px; margin: auto; background: #1e1e1e; padding: 25px; border-radius: 15px; border: 2px solid #fe2c55; }
-        input { width: 80%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #333; background: #000; color: white; }
+        input { width: 85%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: white; }
         button { width: 85%; padding: 15px; background: #fe2c55; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .setting-row { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 15px 0; font-size: 14px; border-top: 1px solid #333; padding-top: 15px; }
         #chat { height: 350px; overflow-y: auto; background: #000; margin-top: 15px; padding: 15px; text-align: left; border-radius: 10px; display: flex; flex-direction: column-reverse; }
-        .msg { margin-bottom: 8px; border-bottom: 1px solid #222; font-size: 14px; line-height: 1.4; }
+        .msg { margin-bottom: 8px; border-bottom: 1px solid #222; padding-bottom: 5px; font-size: 14px; }
         #stt { color: #00f2ea; font-weight: bold; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 22px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #fe2c55; }
+        input:checked + .slider:before { transform: translateX(22px); }
     </style>
 </head>
 <body>
     <div class="box">
-        <h2>TIKTOK LIVE TTS</h2>
-        <input type="text" id="user" placeholder="Nhập Username TikTok">
-        <button onclick="start()">KẾT NỐI VÀ BẬT ĐỌC</button>
+        <h2 style="color: #fe2c55;">TIKTOK LIVE TTS</h2>
+        <input type="text" id="user" placeholder="Nhập ID TikTok">
+        <button onclick="start()">KẾT NỐI HỆ THỐNG</button>
+        <div class="setting-row">
+            <span>Chào anh ghé chơi:</span>
+            <label class="switch">
+                <input type="checkbox" id="welcomeToggle" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
         <p id="stt">Trạng thái: Sẵn sàng</p>
         <div id="chat"></div>
     </div>
+
     <script>
         const socket = io();
         let queue = [], playing = false;
+        
+        // Link âm thanh hiệu ứng Ting Ting
+        const tingAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
 
         function start() {
-            const username = document.getElementById('user').value;
-            if(!username) return alert("Vui lòng nhập ID!");
-            socket.emit('set-username', username);
+            const user = document.getElementById('user').value.trim();
+            if(!user) return alert("Nhập ID TikTok!");
+            socket.emit('set-username', user);
             document.getElementById('stt').innerText = "Đang kết nối...";
         }
 
         socket.on('status', m => document.getElementById('stt').innerText = m);
 
         socket.on('audio-data', d => {
+            const isWelcomeOn = document.getElementById('welcomeToggle').checked;
+            
             const div = document.createElement('div');
             div.className = 'msg';
+            div.style.color = d.type === 'welcome' ? '#00f2ea' : 'white';
             div.innerHTML = `<b style="color:#fe2c55">${d.user}:</b> ${d.comment}`;
             document.getElementById('chat').prepend(div);
 
             if (d.audio) {
+                if (d.type === 'welcome' && !isWelcomeOn) return;
+                
+                // Nếu là lời chào, cho ting ting vào hàng đợi trước
+                if (d.type === 'welcome') {
+                    queue.push('TING'); 
+                }
+                
                 queue.push(d.audio);
                 if (!playing) play();
             }
@@ -50,10 +78,18 @@
         function play() {
             if (!queue.length) { playing = false; return; }
             playing = true;
-            const a = new Audio(queue.shift());
-            a.onended = () => setTimeout(play, 300);
-            a.onerror = () => { playing = false; play(); };
-            a.play().catch(() => { playing = false; play(); });
+            
+            const nextItem = queue.shift();
+
+            if (nextItem === 'TING') {
+                tingAudio.play();
+                tingAudio.onended = () => { play(); };
+            } else {
+                const a = new Audio(nextItem);
+                a.onended = () => setTimeout(play, 300);
+                a.onerror = () => { playing = false; play(); };
+                a.play().catch(() => { playing = false; play(); });
+            }
         }
     </script>
 </body>
