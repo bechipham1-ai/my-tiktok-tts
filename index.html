@@ -2,19 +2,17 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>TikTok Live TTS - Google Voice Pro</title>
+    <title>TikTok TTS Pro Fix</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
         .box { max-width: 500px; margin: auto; background: #1e1e1e; padding: 25px; border-radius: 15px; border: 2px solid #fe2c55; }
         input { width: 85%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: white; }
         button { width: 85%; padding: 15px; background: #fe2c55; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .setting-row { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 15px 0; font-size: 14px; border-top: 1px solid #333; padding-top: 15px; }
         #chat { height: 350px; overflow-y: auto; background: #000; margin-top: 15px; padding: 15px; text-align: left; border-radius: 10px; display: flex; flex-direction: column-reverse; }
-        .msg { margin-bottom: 8px; border-bottom: 1px solid #222; padding-bottom: 5px; font-size: 14px; }
-        #stt { color: #00f2ea; font-weight: bold; }
+        .msg { margin-bottom: 8px; border-bottom: 1px solid #222; font-size: 14px; }
         .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
+        .switch input { opacity: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 22px; }
         .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #fe2c55; }
@@ -23,71 +21,71 @@
 </head>
 <body>
     <div class="box">
-        <h2 style="color: #fe2c55;">TIKTOK LIVE TTS</h2>
+        <h2>TIKTOK TTS FIX</h2>
         <input type="text" id="user" placeholder="Nhập ID TikTok">
-        <button onclick="start()">KẾT NỐI HỆ THỐNG</button>
-        <div class="setting-row">
-            <span>Chào anh ghé chơi:</span>
-            <label class="switch">
-                <input type="checkbox" id="welcomeToggle" checked>
-                <span class="slider"></span>
-            </label>
+        <button onclick="start()">KẾT NỐI</button>
+        <div style="margin-top:15px; font-size:14px;">
+            Chào người mới: 
+            <label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label>
         </div>
-        <p id="stt">Trạng thái: Sẵn sàng</p>
+        <p id="stt" style="color:#00f2ea">Sẵn sàng</p>
         <div id="chat"></div>
     </div>
 
     <script>
         const socket = io();
         let queue = [], playing = false;
-        const tingAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+        const ting = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
 
         function start() {
-            const user = document.getElementById('user').value.trim();
-            if(!user) return alert("Nhập ID TikTok!");
-            socket.emit('set-username', user);
+            socket.emit('set-username', document.getElementById('user').value.trim());
             document.getElementById('stt').innerText = "Đang kết nối...";
-            queue = []; // Xóa hàng đợi cũ khi kết nối mới
+            queue = [];
         }
 
         socket.on('status', m => document.getElementById('stt').innerText = m);
 
         socket.on('audio-data', d => {
-            const isWelcomeOn = document.getElementById('welcomeToggle').checked;
-            
+            // Luôn hiện text kể cả khi Google bị lỗi âm thanh
             const div = document.createElement('div');
             div.className = 'msg';
-            if(d.type === 'welcome') div.style.color = '#00f2ea';
-            else if(d.type === 'system') div.style.color = '#fe2c55';
-            else div.style.color = 'white';
-            
-            div.innerHTML = `<b style="color:#fe2c55">${d.user}:</b> ${d.comment}`;
+            div.style.color = d.type === 'welcome' ? '#00f2ea' : (d.type === 'system' ? '#fe2c55' : 'white');
+            div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
             document.getElementById('chat').prepend(div);
 
             if (d.audio) {
-                // Chỉ bỏ qua nếu là lời chào mà nút đang tắt. Các loại khác (chat, system) luôn đọc.
-                if (d.type === 'welcome' && !isWelcomeOn) return;
-                
-                if (d.type === 'welcome') queue.push('TING'); 
-                
+                if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
+                if (d.type === 'welcome') queue.push('TING');
                 queue.push(d.audio);
                 if (!playing) play();
+            } else if (playing === false && queue.length > 0) {
+                // Nếu âm thanh bị null nhưng queue còn thì vẫn tiếp tục
+                play();
             }
         });
 
         function play() {
             if (!queue.length) { playing = false; return; }
             playing = true;
-            const nextItem = queue.shift();
-
-            if (nextItem === 'TING') {
-                tingAudio.play();
-                tingAudio.onended = () => { play(); };
+            
+            const item = queue.shift();
+            if (item === 'TING') {
+                ting.play().then(() => {
+                    ting.onended = () => play();
+                }).catch(() => play());
             } else {
-                const a = new Audio(nextItem);
-                a.onended = () => setTimeout(play, 300);
-                a.onerror = () => { playing = false; play(); };
-                a.play().catch(() => { playing = false; play(); });
+                const a = new Audio(item);
+                // Xử lý lỗi: Nếu 3 giây không phát được thì bỏ qua câu này
+                const timeout = setTimeout(() => {
+                    console.log("Audio bị kẹt, đang nhảy câu...");
+                    a.pause();
+                    play();
+                }, 4000);
+
+                a.onplay = () => {};
+                a.onended = () => { clearTimeout(timeout); setTimeout(play, 200); };
+                a.onerror = () => { clearTimeout(timeout); play(); };
+                a.play().catch(() => { clearTimeout(timeout); play(); });
             }
         }
     </script>
