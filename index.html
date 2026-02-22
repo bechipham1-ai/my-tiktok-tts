@@ -2,81 +2,87 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>TikTok TTS v2.0</title>
+    <title>TikTok TTS Admin</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: sans-serif; background: #000; color: #fff; text-align: center; }
-        .box { max-width: 450px; margin: 20px auto; background: #111; padding: 20px; border-radius: 15px; border: 1px solid #fe2c55; }
-        input { width: 80%; padding: 10px; border-radius: 5px; border: none; margin-bottom: 10px; }
-        button { width: 85%; padding: 12px; background: #fe2c55; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        #chat { height: 400px; overflow-y: auto; background: #080808; margin-top: 15px; padding: 10px; border-radius: 8px; font-size: 13px; display: flex; flex-direction: column; text-align: left; }
-        .msg { padding: 5px; border-bottom: 1px solid #222; animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+        body { font-family: sans-serif; background: #121212; color: white; display: flex; gap: 20px; padding: 20px; }
+        .main-box, .admin-box { background: #1e1e1e; padding: 20px; border-radius: 10px; border: 1px solid #fe2c55; }
+        .main-box { flex: 2; }
+        .admin-box { flex: 1; }
+        input, button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 5px; border: none; }
+        button { background: #fe2c55; color: white; cursor: pointer; font-weight: bold; }
+        #word-list { height: 200px; overflow-y: auto; background: #000; padding: 10px; font-size: 12px; }
+        .word-item { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 5px 0; }
+        .del-btn { background: gray; width: auto; padding: 2px 5px; font-size: 10px; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h3>TIKTOK LIVE TTS v2.0</h3>
-        <input type="text" id="user" placeholder="ID TikTok">
+    <div class="main-box">
+        <h3>TIKTOK LIVE TTS</h3>
+        <input type="text" id="user" placeholder="Nhập ID TikTok">
         <button onclick="start()">KẾT NỐI</button>
-        <div style="margin: 10px; font-size: 12px;">
-            Chào: <input type="checkbox" id="welcomeToggle" checked style="width:auto;">
-        </div>
-        <p id="stt" style="color:#00f2ea; font-size: 12px;">Sẵn sàng</p>
-        <div id="chat" id="chatbox"></div>
+        <p id="stt">Sẵn sàng</p>
+        <div id="chat" style="height: 300px; overflow-y: auto; background: #000; padding: 10px;"></div>
+    </div>
+
+    <div class="admin-box">
+        <h3>QUẢN TRỊ TỪ CẤM</h3>
+        <input type="text" id="new-word" placeholder="Thêm từ cấm mới...">
+        <button onclick="addWord()">THÊM</button>
+        <div id="word-list"></div>
     </div>
 
     <script>
         const socket = io();
         let queue = [], playing = false;
-        const ting = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+
+        // Quản lý từ cấm
+        async function loadWords() {
+            const res = await fetch('/api/words');
+            const words = await res.json();
+            const list = document.getElementById('word-list');
+            list.innerHTML = words.map(w => `
+                <div class="word-item">${w} <button class="del-btn" onclick="delWord('${w}')">Xóa</button></div>
+            `).join('');
+        }
+
+        async function addWord() {
+            const word = document.getElementById('new-word').value;
+            if(!word) return;
+            await fetch('/api/words', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({word}) });
+            document.getElementById('new-word').value = '';
+            loadWords();
+        }
+
+        async function delWord(word) {
+            await fetch(`/api/words/${word}`, { method: 'DELETE' });
+            loadWords();
+        }
 
         function start() {
-            const u = document.getElementById('user').value.trim();
-            if(!u) return;
-            socket.emit('set-username', u);
+            socket.emit('set-username', document.getElementById('user').value);
             document.getElementById('stt').innerText = "Đang kết nối...";
-            document.getElementById('chat').innerHTML = ""; 
-            queue = [];
         }
 
         socket.on('audio-data', d => {
-            const chatBox = document.getElementById('chat');
-            
-            // 1. Hiển thị chữ và dọn dẹp bộ nhớ (giữ tối đa 50 dòng)
             const div = document.createElement('div');
-            div.className = 'msg';
-            div.innerHTML = `<span style="color:#fe2c55"><b>${d.user}:</b></span> ${d.comment}`;
-            chatBox.insertBefore(div, chatBox.firstChild);
-            if (chatBox.children.length > 50) chatBox.removeChild(chatBox.lastChild);
-
-            // 2. Xử lý âm thanh
+            div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
+            document.getElementById('chat').prepend(div);
             if (d.audio) {
-                if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
-                if (d.type === 'welcome') queue.push('TING');
                 queue.push(d.audio);
                 if (!playing) play();
             }
         });
 
-        socket.on('status', m => document.getElementById('stt').innerText = m);
-
         function play() {
             if (!queue.length) { playing = false; return; }
             playing = true;
-            const item = queue.shift();
-
-            if (item === 'TING') {
-                ting.play().then(() => ting.onended = () => play()).catch(() => play());
-            } else {
-                const a = new Audio(item);
-                // Giới hạn thời gian phát mỗi câu tối đa 6 giây để không treo hàng đợi
-                const t = setTimeout(() => { a.pause(); play(); }, 6000);
-                a.onended = () => { clearTimeout(t); play(); };
-                a.onerror = () => { clearTimeout(t); play(); };
-                a.play().catch(() => { clearTimeout(t); play(); });
-            }
+            const a = new Audio(queue.shift());
+            a.onended = () => play();
+            a.play().catch(() => play());
         }
+
+        loadWords();
     </script>
 </body>
 </html>
