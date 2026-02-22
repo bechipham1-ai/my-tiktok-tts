@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Idol Bèo TTS - Gọn Nhẹ</title>
+    <title>Idol Bèo TTS - Fix Viết Tắt</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root { --main: #fe2c55; --bg: #121212; --panel: #1e1e1e; }
@@ -14,6 +14,7 @@
         button { background: var(--main); color: white; font-weight: bold; cursor: pointer; }
         #chat, .list-box { flex-grow: 1; overflow-y: auto; background: #000; padding: 10px; border-radius: 8px; margin-top: 10px; border: 1px solid #222; }
         .msg { font-size: 14px; border-bottom: 1px solid #222; padding: 8px 0; }
+        .msg-sub { font-size: 11px; color: #888; font-style: italic; display: block; margin-top: 4px; }
         .setting-row { display: flex; align-items: center; justify-content: space-between; background: #000; padding: 10px; border-radius: 8px; margin: 5px 0; border: 1px solid #333; font-size: 13px; }
         .switch { position: relative; display: inline-block; width: 34px; height: 18px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -49,8 +50,8 @@
             <div class="list-box" id="word-list"></div>
         </div>
         <div id="tab-acr-ui" style="display:none;">
-            <input type="text" id="acr-key" placeholder="Viết tắt">
-            <input type="text" id="acr-val" placeholder="Dịch ra">
+            <input type="text" id="acr-key" placeholder="Viết tắt (vd: a)">
+            <input type="text" id="acr-val" placeholder="Dịch ra (vd: anh)">
             <button onclick="addAcr()">THÊM TỪ ĐIỂN</button>
             <div class="list-box" id="acr-list"></div>
         </div>
@@ -97,7 +98,15 @@
             const isWelcomeOn = document.getElementById('welcomeToggle').checked;
             const chat = document.getElementById('chat');
             const div = document.createElement('div'); div.className = 'msg';
-            div.innerHTML = `<b style="color:#fe2c55">${d.user}:</b> <span style="color:${d.type==='welcome'?'#00f2ea':'white'}">${d.comment}</span>`;
+            
+            let content = `<b style="color:#fe2c55">${d.user}:</b> <span style="color:${d.type==='welcome'?'#00f2ea':'white'}">${d.comment}</span>`;
+            
+            // Nếu có nội dung đã xử lý viết tắt khác với câu gốc, hiển thị để idol biết
+            if(d.processed && d.processed !== d.comment) {
+                content += `<span class="msg-sub">➜ Đã dịch: ${d.processed}</span>`;
+            }
+            
+            div.innerHTML = content;
             chat.prepend(div);
 
             if (d.audio) {
