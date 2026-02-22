@@ -49,16 +49,27 @@ const RENDER_URL = process.env.RENDER_EXTERNAL_HOSTNAME ? `https://${process.env
 app.get('/ping', (req, res) => res.send('pong'));
 setInterval(() => axios.get(`${RENDER_URL}/ping`).catch(() => {}), 5 * 60 * 1000);
 
+// XỬ LÝ VĂN BẢN (ĐÃ FIX LỖI VIẾT TẮT)
 async function processText(text) {
     let lowerText = text.toLowerCase();
+    
+    // 1. Kiểm tra từ cấm
     const banned = await BannedWord.find();
-    for (let b of banned) { if (lowerText.includes(b.word)) return null; }
+    for (let b of banned) { 
+        if (lowerText.includes(b.word)) return null; 
+    }
+
+    // 2. Thay thế từ viết tắt (Sử dụng ranh giới từ \b)
     const acronyms = await Acronym.find();
     let finalChat = text;
+    
     acronyms.forEach(a => {
-        const regex = new RegExp(`\\b${a.key}\\b`, 'gi');
+        // \b giúp phân biệt "a" độc lập với "a" trong "nữa"
+        // Thêm 'u' flag để hỗ trợ tiếng Việt có dấu tốt hơn
+        const regex = new RegExp(`(?<!\\p{L})${a.key}(?!\\p{L})`, 'giu');
         finalChat = finalChat.replace(regex, a.value);
     });
+    
     return finalChat;
 }
 
@@ -88,14 +99,19 @@ io.on('connection', (socket) => {
                 const finalContent = await processText(data.comment);
                 if (finalContent) {
                     const audio = await getGoogleAudio(`${data.nickname} nói: ${finalContent}`);
-                    socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: data.comment, processed: finalContent, audio });
+                    socket.emit('audio-data', { 
+                        type: 'chat', 
+                        user: data.nickname, 
+                        comment: data.comment, 
+                        processed: finalContent, 
+                        audio 
+                    });
                 }
             }
         });
 
         tiktok.on('member', async (data) => {
             if (Date.now() > startTime) {
-                // Chào tất cả mọi người vào phòng, không check level
                 const audio = await getGoogleAudio(`Bèo ơi, anh ${data.nickname} ghé chơi nè`);
                 socket.emit('audio-data', { 
                     type: 'welcome', 
