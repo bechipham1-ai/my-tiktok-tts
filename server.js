@@ -19,7 +19,7 @@ mongoose.connect(MONGODB_URI).then(() => console.log("✅ Kết nối MongoDB th
 const BannedWord = mongoose.model('BannedWord', { word: String });
 const Acronym = mongoose.model('Acronym', { key: String, value: String });
 
-// API QUẢN TRỊ
+// --- API QUẢN TRỊ ---
 app.get('/api/words', async (req, res) => {
     const data = await BannedWord.find();
     res.json(data.map(w => w.word));
@@ -91,31 +91,39 @@ io.on('connection', (socket) => {
                 if (finalContent) {
                     const audio = await getGoogleAudio(`${data.nickname} nói: ${finalContent}`);
                     socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: data.comment, processed: finalContent, audio });
-                } else {
-                    socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: "⚠️ Từ cấm", audio: null });
                 }
             }
         });
 
-        // 2. MEMBER VÀO PHÒNG BÌNH THƯỜNG
-        tiktok.on('member', async (data) => {
-            if (Date.now() > startTime) {
-                let fLevel = 0;
-                if (data.fanTicket && data.fanTicket.level) fLevel = data.fanTicket.level;
-                const audio = await getGoogleAudio(`Bèo ơi, anh ${data.nickname} ghé chơi nè`);
-                socket.emit('audio-data', { type: 'welcome', user: "Hệ thống", comment: `Anh ${data.nickname} (Tim đội Lv.${fLevel}) vào`, audio, fanLevel: fLevel });
-            }
-        });
+        // HÀM CHÀO CHUNG (Dùng cho cả Member và RoomUser)
+        async function handleWelcome(data, isVip = false) {
+            if (Date.now() <= startTime) return;
 
-        // 3. NGƯỜI VÀO PHÒNG CÓ HIỆU ỨNG BAY (SOCIAL EVENT)
-        tiktok.on('social', async (data) => {
-            if (Date.now() > startTime && data.displayType.includes('join')) {
-                let fLevel = 0;
-                if (data.fanTicket && data.fanTicket.level) fLevel = data.fanTicket.level;
-                
-                // Câu chào đặc biệt cho khách quý bay trên màn hình
-                const audio = await getGoogleAudio(`Chào mừng khách quý, anh ${data.nickname} vừa ghé thăm Bèo`);
-                socket.emit('audio-data', { type: 'welcome', user: "Khách VIP", comment: `${data.nickname} (Tim đội Lv.${fLevel}) đang bay vào!`, audio, fanLevel: fLevel });
+            let fLevel = 0;
+            if (data.fanTicket && data.fanTicket.level) fLevel = data.fanTicket.level;
+
+            const prefix = isVip ? "Chào mừng khách quý " : "Chào ";
+            const audio = await getGoogleAudio(`${prefix} ${data.nickname} vừa ghé chơi nè`);
+            
+            socket.emit('audio-data', { 
+                type: 'welcome', 
+                user: isVip ? "KHÁCH VIP" : "Hệ thống", 
+                comment: `${data.nickname} đã tham gia (Lv.${fLevel})`, 
+                audio, 
+                fanLevel: fLevel 
+            });
+        }
+
+        // 2. MEMBER VÀO PHÒNG (Dòng chữ phía dưới)
+        tiktok.on('member', (data) => handleWelcome(data, false));
+
+        // 3. ROOM USER (Dòng chữ bay phía trên - Cấp cao)
+        tiktok.on('roomUser', (data) => handleWelcome(data, true));
+        
+        // 4. DỰ PHÒNG SOCIAL (Một số trường hợp VIP khác)
+        tiktok.on('social', (data) => {
+            if (data.displayType && data.displayType.includes('join')) {
+                handleWelcome(data, true);
             }
         });
     });
