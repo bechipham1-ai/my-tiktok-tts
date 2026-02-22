@@ -43,16 +43,10 @@ function replaceEmojis(text) {
     return newText.replace(emojiRegex, "");
 }
 
-// Hàm lấy Audio từ Google với mẹo chỉnh giọng "mượt" hơn
+// Hàm lấy Audio từ Google (Giữ nguyên văn bản gốc)
 async function getGoogleAudio(text) {
     try {
-        // Mẹo: Thêm dấu phẩy và kéo dài từ để giọng trẻ trung hơn
-        let tunedText = text
-            .replace(/Bèo ơi/g, "Bèoo ơi,, ")
-            .replace(/vào nè/g, "vào nè... .")
-            .replace(/ghé chơi nè/g, "ghé chơi nè... tươi không cần tưới!");
-
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(tunedText.substring(0, 200))}&tl=vi&client=tw-ob`;
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.substring(0, 200))}&tl=vi&client=tw-ob`;
         
         const response = await axios.get(url, { 
             responseType: 'arraybuffer', 
@@ -78,14 +72,14 @@ io.on('connection', (socket) => {
         }
 
         tiktok = new WebcastPushConnection(username, {
-            processInitialData: false // Không lấy dữ liệu cũ trước khi kết nối
+            processInitialData: false 
         });
 
         startTime = Date.now();
 
         tiktok.connect().then(async () => {
             socket.emit('status', `Đã kết nối ID: ${username}`);
-            const audio = await getGoogleAudio("Kết nối thành công, bắt đầu đọc bình luận nè!");
+            const audio = await getGoogleAudio("Kết nối thành công, bắt đầu đọc bình luận");
             socket.emit('audio-data', { type: 'system', user: "Hệ thống", comment: "Đã sẵn sàng!", audio });
         }).catch(err => {
             socket.emit('status', `Lỗi kết nối: ${err.message}`);
@@ -103,17 +97,14 @@ io.on('connection', (socket) => {
         // Chào người mới
         tiktok.on('member', async (data) => {
             if (Date.now() > startTime) {
-                const audio = await getGoogleAudio(`Bèo ơi, anh ${data.nickname} ghé chơi nè`);
+                const welcomeText = `Bèo ơi, anh ${data.nickname} ghé chơi nè`;
+                const audio = await getGoogleAudio(welcomeText);
                 socket.emit('audio-data', { type: 'welcome', user: "Hệ thống", comment: `Anh ${data.nickname} vừa vào`, audio });
             }
         });
 
         tiktok.on('disconnected', () => {
             socket.emit('status', 'Mất kết nối TikTok, vui lòng thử lại');
-        });
-        
-        tiktok.on('error', (err) => {
-            console.error(err);
         });
     });
 
