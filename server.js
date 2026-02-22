@@ -12,54 +12,71 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.json());
 
-// 1. KẾT NỐI DATABASE (Đã điền user: baoboi97 và pass: baoboi97)
 const MONGODB_URI = "mongodb+srv://baoboi97:baoboi97@cluster0.skkajlz.mongodb.net/tiktok_tts?retryWrites=true&w=majority&appName=Cluster0";
+mongoose.connect(MONGODB_URI).then(() => console.log("✅ DB Connected"));
 
-mongoose.connect(MONGODB_URI)
-    .then(() => console.log("✅ Đã kết nối MongoDB thành công!"))
-    .catch(err => console.error("❌ Lỗi kết nối DB:", err));
-
-// Định nghĩa bảng từ cấm
+// --- DATABASE MODELS ---
 const BannedWord = mongoose.model('BannedWord', { word: String });
+const Acronym = mongoose.model('Acronym', { key: String, value: String }); // Bảng viết tắt
 
-// 2. TÍNH NĂNG ANTI-SLEEP (Giữ server luôn thức)
-const RENDER_URL = process.env.RENDER_EXTERNAL_HOSTNAME ? `https://${process.env.RENDER_EXTERNAL_HOSTNAME}` : `http://localhost:3000`;
-app.get('/ping', (req, res) => res.send('pong'));
-setInterval(() => {
-    axios.get(`${RENDER_URL}/ping`).catch(() => {});
-}, 5 * 60 * 1000);
-
-// 3. API QUẢN TRỊ TỪ CẤM
-app.get('/api/words', async (req, res) => {
-    const words = await BannedWord.find();
-    res.json(words.map(w => w.word));
+// --- API QUẢN TRỊ VIẾT TẮT ---
+app.get('/api/acronyms', async (req, res) => {
+    const data = await Acronym.find();
+    res.json(data);
 });
 
-app.post('/api/words', async (req, res) => {
-    const word = req.body.word ? req.body.word.toLowerCase().trim() : "";
-    if (word) {
-        const exists = await BannedWord.findOne({ word });
-        if (!exists) await BannedWord.create({ word });
+app.post('/api/acronyms', async (req, res) => {
+    const { key, value } = req.body;
+    if (key && value) {
+        await Acronym.findOneAndUpdate(
+            { key: key.toLowerCase().trim() },
+            { value: value.trim() },
+            { upsert: true }
+        );
     }
     res.sendStatus(200);
 });
 
+app.delete('/api/acronyms/:key', async (req, res) => {
+    await Acronym.deleteOne({ key: req.params.key });
+    res.sendStatus(200);
+});
+
+// Giữ API từ cấm cũ
+app.get('/api/words', async (req, res) => {
+    const words = await BannedWord.find();
+    res.json(words.map(w => w.word));
+});
+app.post('/api/words', async (req, res) => {
+    const word = req.body.word ? req.body.word.toLowerCase().trim() : "";
+    if (word) await BannedWord.updateOne({ word }, { word }, { upsert: true });
+    res.sendStatus(200);
+});
 app.delete('/api/words/:word', async (req, res) => {
     await BannedWord.deleteOne({ word: req.params.word });
     res.sendStatus(200);
 });
 
-// 4. HÀM XỬ LÝ ÂM THANH & LỌC TỪ
-async function filterAndCleanText(text) {
-    const banned = await BannedWord.find();
-    let lowerText = text.toLowerCase();
-    let isBanned = false;
+// --- HÀM XỬ LÝ VĂN BẢN ---
+async function processText(text) {
+    let processed = text.toLowerCase();
     
-    banned.forEach(b => {
-        if (lowerText.includes(b.word)) isBanned = true;
+    // 1. Kiểm tra từ cấm trước
+    const banned = await BannedWord.find();
+    for (let b of banned) {
+        if (processed.includes(b.word)) return null; 
+    }
+
+    // 2. Thay thế từ viết tắt (Sử dụng Regex để thay thế chính xác từ đứng riêng lẻ)
+    const acronyms = await Acronym.find();
+    let finalChat = text; 
+    acronyms.forEach(a => {
+        // Regex này giúp thay "dag" nhưng không thay "dag" trong "dagiau"
+        const regex = new RegExp(`\\b${a.key}\\b`, 'gi');
+        finalChat = finalChat.replace(regex, a.value);
     });
 
-    return isBanned ? null : text;
+    return finalChat;
 }
 
 async function getGoogleAudio(text) {
@@ -71,7 +88,6 @@ async function getGoogleAudio(text) {
     } catch (e) { return null; }
 }
 
-// 5. LOGIC TIKTOK LIVE
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 io.on('connection', (socket) => {
@@ -82,21 +98,16 @@ io.on('connection', (socket) => {
         if (tiktok) tiktok.disconnect();
         tiktok = new WebcastPushConnection(username, { processInitialData: false });
         startTime = Date.now();
-
-        tiktok.connect().then(async () => {
-            socket.emit('status', `Đã kết nối ID: ${username}`);
-            const audio = await getGoogleAudio("Kết nối thành công, bắt đầu đọc bình luận");
-            socket.emit('audio-data', { type: 'system', user: "Hệ thống", comment: "Sẵn sàng!", audio });
-        }).catch(err => socket.emit('status', `Lỗi: ${err.message}`));
+        tiktok.connect().then(() => socket.emit('status', `Đã kết nối ID: ${username}`));
 
         tiktok.on('chat', async (data) => {
             if (Date.now() > startTime) {
-                const safeText = await filterAndCleanText(data.comment);
-                if (safeText) {
-                    const audio = await getGoogleAudio(`${data.nickname} nói: ${safeText}`);
-                    socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: data.comment, audio });
+                const finalContent = await processText(data.comment);
+                if (finalContent) {
+                    const audio = await getGoogleAudio(`${data.nickname} nói: ${finalContent}`);
+                    socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: data.comment, processed: finalContent, audio });
                 } else {
-                    socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: "⚠️ Bình luận chứa từ cấm", audio: null });
+                    socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: "⚠️ Từ cấm", audio: null });
                 }
             }
         });
@@ -108,9 +119,6 @@ io.on('connection', (socket) => {
             }
         });
     });
-
-    socket.on('disconnect', () => { if (tiktok) tiktok.disconnect(); });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server chạy tại port ${PORT}`));
+server.listen(process.env.PORT || 3000);
