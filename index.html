@@ -2,19 +2,17 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>TTS Idol Bèo - Dashboard</title>
+    <title>TTS Idol Bèo</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root { --main: #fe2c55; --bg: #121212; --panel: #1e1e1e; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; display: flex; gap: 20px; height: 100vh; box-sizing: border-box; }
+        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; display: flex; gap: 20px; height: 100vh; box-sizing: border-box; }
         .column { background: var(--panel); padding: 20px; border-radius: 12px; border: 1px solid #333; display: flex; flex-direction: column; }
-        .left { flex: 2; border-color: var(--main); }
-        .right { flex: 1.5; }
-        input, button { padding: 12px; margin: 5px 0; border-radius: 8px; border: none; width: 100%; box-sizing: border-box; font-size: 14px; }
-        button { background: var(--main); color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { opacity: 0.8; }
+        .left { flex: 2; } .right { flex: 1.5; }
+        input, button { padding: 12px; margin: 5px 0; border-radius: 8px; border: none; width: 100%; box-sizing: border-box; }
+        button { background: var(--main); color: white; font-weight: bold; cursor: pointer; }
         #chat, .list-box { flex-grow: 1; overflow-y: auto; background: #000; padding: 10px; border-radius: 8px; margin-top: 10px; border: 1px solid #222; }
-        .msg { font-size: 14px; border-bottom: 1px solid #222; padding: 10px 0; line-height: 1.4; }
+        .msg { font-size: 14px; border-bottom: 1px solid #222; padding: 8px 0; }
         .setting-row { display: flex; align-items: center; justify-content: space-between; background: #252525; padding: 10px; border-radius: 8px; margin: 5px 0; font-size: 13px; }
         .switch { position: relative; display: inline-block; width: 34px; height: 18px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -29,44 +27,19 @@
 <body>
     <div class="column left">
         <h3 style="color:var(--main); margin:0 0 10px 0;">🎙️ TIKTOK TTS - IDOL BÈO</h3>
-        <input type="text" id="user" placeholder="Nhập ID TikTok của bạn">
-        <button onclick="start()">BẮT ĐẦU KẾT NỐI</button>
-        
-        <div class="setting-row">
-            <span>🔊 Bật lời chào người vào:</span>
-            <label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label>
-        </div>
-        <div class="setting-row">
-            <span>🎁 Bật cảm ơn góp gạo:</span>
-            <label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label>
-        </div>
-        <div class="setting-row">
-            <span>❤️ Bật cảm ơn Follow:</span>
-            <label class="switch"><input type="checkbox" id="followToggle" checked><span class="slider"></span></label>
-        </div>
-        
-        <p id="stt" style="color:#00f2ea; font-size:12px; margin:10px 0;">Trạng thái: Sẵn sàng</p>
+        <input type="text" id="user" placeholder="Nhập ID TikTok">
+        <button onclick="start()">KẾT NỐI</button>
+        <div class="setting-row"><span>🔊 Chào người vào:</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
+        <div class="setting-row"><span>🎁 Cảm ơn quà:</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
+        <div class="setting-row"><span>❤️ Cảm ơn Follow:</span><label class="switch"><input type="checkbox" id="followToggle" checked><span class="slider"></span></label></div>
+        <p id="stt" style="color:#00f2ea; font-size:12px;">Trạng thái: Sẵn sàng</p>
         <div id="chat"></div>
     </div>
-
     <div class="column right">
-        <div>
-            <button class="tab-btn tab-active" id="btn-ban" onclick="switchTab('ban')">TỪ CẤM</button>
-            <button class="tab-btn" id="btn-acr" onclick="switchTab('acr')">VIẾT TẮT</button>
-        </div>
-        <div id="tab-ban-ui">
-            <input type="text" id="new-word" placeholder="Nhập từ muốn chặn...">
-            <button onclick="addWord()">THÊM VÀO DANH SÁCH</button>
-            <div class="list-box" id="word-list"></div>
-        </div>
-        <div id="tab-acr-ui" style="display:none;">
-            <input type="text" id="acr-key" placeholder="Từ viết tắt (vd: a)">
-            <input type="text" id="acr-val" placeholder="Dịch ra (vd: anh)">
-            <button onclick="addAcr()">THÊM TỪ ĐIỂN</button>
-            <div class="list-box" id="acr-list"></div>
-        </div>
+        <div><button class="tab-btn tab-active" id="btn-ban" onclick="switchTab('ban')">TỪ CẤM</button><button class="tab-btn" id="btn-acr" onclick="switchTab('acr')">VIẾT TẮT</button></div>
+        <div id="tab-ban-ui"><input type="text" id="new-word" placeholder="Chặn từ..."><button onclick="addWord()">THÊM</button><div class="list-box" id="word-list"></div></div>
+        <div id="tab-acr-ui" style="display:none;"><input type="text" id="acr-key" placeholder="Viết tắt"><input type="text" id="acr-val" placeholder="Dịch ra"><button onclick="addAcr()">THÊM</button><div class="list-box" id="acr-list"></div></div>
     </div>
-
     <script>
         const socket = io();
         let queue = [], playing = false;
@@ -81,7 +54,7 @@
 
         async function loadAcronyms() {
             const res = await fetch('/api/acronyms'); const data = await res.json();
-            document.getElementById('acr-list').innerHTML = data.map(a => `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #333;"><span><b>${a.key}</b> ➜ ${a.value}</span> <span style="color:#ff4d4d; cursor:pointer;" onclick="delAcr('${a.key}')">XÓA</span></div>`).join('');
+            document.getElementById('acr-list').innerHTML = data.map(a => `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #333;"><span><b>${a.key}</b> ➜ ${a.value}</span><span style="color:#ff4d4d; cursor:pointer;" onclick="delAcr('${a.key}')">XÓA</span></div>`).join('');
         }
         async function addAcr() {
             const key = document.getElementById('acr-key').value; const value = document.getElementById('acr-val').value;
@@ -92,7 +65,7 @@
 
         async function loadWords() {
             const res = await fetch('/api/words'); const data = await res.json();
-            document.getElementById('word-list').innerHTML = data.map(w => `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #333;"><span>${w}</span> <span style="color:#ff4d4d; cursor:pointer;" onclick="delWord('${w}')">XÓA</span></div>`).join('');
+            document.getElementById('word-list').innerHTML = data.map(w => `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #333;"><span>${w}</span><span style="color:#ff4d4d; cursor:pointer;" onclick="delWord('${w}')">XÓA</span></div>`).join('');
         }
         async function addWord() {
             const word = document.getElementById('new-word').value;
@@ -105,27 +78,20 @@
         socket.on('status', m => document.getElementById('stt').innerText = 'Trạng thái: ' + m);
 
         socket.on('audio-data', d => {
-            const isWelcomeOn = document.getElementById('welcomeToggle').checked;
-            const isGiftOn = document.getElementById('giftToggle').checked;
-            const isFollowOn = document.getElementById('followToggle').checked;
-            
             const chat = document.getElementById('chat');
             const div = document.createElement('div'); div.className = 'msg';
-            
-            let color = 'white';
-            if (d.type === 'welcome') color = '#00f2ea';
-            if (d.type === 'gift') color = '#ffeb3b';
-            if (d.type === 'follow') color = '#e91e63';
-
-            div.innerHTML = `<b style="color:#fe2c55">${d.user}:</b> <span style="color:${color}">${d.comment}</span>`;
+            div.innerHTML = `<b style="color:#fe2c55">${d.user}:</b> <span>${d.comment}</span>`;
             chat.prepend(div);
 
             if (d.audio) {
-                if (d.type === 'welcome' && !isWelcomeOn) return;
-                if (d.type === 'gift' && !isGiftOn) return;
-                if (d.type === 'follow' && !isFollowOn) return;
+                if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
+                if (d.type === 'gift' && !document.getElementById('giftToggle').checked) return;
+                if (d.type === 'follow' && !document.getElementById('followToggle').checked) return;
 
-                queue.push('TING');
+                // CHỈ PHÁT TIẾNG TING CHO QUÀ VÀ FOLLOW
+                if (d.type === 'gift' || d.type === 'follow') {
+                    queue.push('TING');
+                }
                 queue.push(d.audio);
                 if (!playing) play();
             }
