@@ -20,7 +20,7 @@ mongoose.connect(MONGODB_URI).then(() => console.log("✅ Kết nối MongoDB th
 const BannedWord = mongoose.model('BannedWord', { word: String });
 const Acronym = mongoose.model('Acronym', { key: String, value: String });
 
-// API QUẢN TRỊ (Từ cấm & Viết tắt)
+// API QUẢN TRỊ
 app.get('/api/words', async (req, res) => {
     const data = await BannedWord.find();
     res.json(data.map(w => w.word));
@@ -52,7 +52,7 @@ const RENDER_URL = process.env.RENDER_EXTERNAL_HOSTNAME ? `https://${process.env
 app.get('/ping', (req, res) => res.send('pong'));
 setInterval(() => axios.get(`${RENDER_URL}/ping`).catch(() => {}), 5 * 60 * 1000);
 
-// XỬ LÝ VĂN BẢN
+// XỬ LÝ VĂN BẢN (Từ cấm & Viết tắt)
 async function processText(text) {
     let lowerText = text.toLowerCase();
     const banned = await BannedWord.find();
@@ -102,16 +102,17 @@ io.on('connection', (socket) => {
 
         tiktok.on('member', async (data) => {
             if (Date.now() > startTime) {
-                // Lấy cấp độ Fan Club từ nhãn (Ví dụ: "Level 12" -> 12)
+                // TRUY XUẤT CHÍNH XÁC CẤP ĐỘ TIM ĐỘI (MÀU CAM)
                 let fLevel = 0;
-                if (data.fanTicket && data.fanTicket.label) {
-                    fLevel = parseInt(data.fanTicket.label.replace(/[^0-9]/g, '')) || 0;
+                if (data.fanTicket && data.fanTicket.level) {
+                    fLevel = data.fanTicket.level;
                 }
+
                 const audio = await getGoogleAudio(`Bèo ơi, anh ${data.nickname} ghé chơi nè`);
                 socket.emit('audio-data', { 
                     type: 'welcome', 
                     user: "Hệ thống", 
-                    comment: `Anh ${data.nickname} (Fan Lv.${fLevel}) vào`, 
+                    comment: `Anh ${data.nickname} (Tim đội Lv.${fLevel}) vào`, 
                     audio, 
                     fanLevel: fLevel 
                 });
