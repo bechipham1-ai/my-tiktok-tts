@@ -12,11 +12,10 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.json());
 
-// KẾT NỐI DATABASE (User: baoboi97 / Pass: baoboi97)
+// KẾT NỐI DATABASE
 const MONGODB_URI = "mongodb+srv://baoboi97:baoboi97@cluster0.skkajlz.mongodb.net/tiktok_tts?retryWrites=true&w=majority&appName=Cluster0";
 mongoose.connect(MONGODB_URI).then(() => console.log("✅ Kết nối MongoDB thành công"));
 
-// CẤU TRÚC DATABASE
 const BannedWord = mongoose.model('BannedWord', { word: String });
 const Acronym = mongoose.model('Acronym', { key: String, value: String });
 
@@ -34,9 +33,7 @@ app.delete('/api/words/:word', async (req, res) => {
     await BannedWord.deleteOne({ word: req.params.word });
     res.sendStatus(200);
 });
-app.get('/api/acronyms', async (req, res) => {
-    res.json(await Acronym.find());
-});
+app.get('/api/acronyms', async (req, res) => res.json(await Acronym.find()));
 app.post('/api/acronyms', async (req, res) => {
     const { key, value } = req.body;
     if (key && value) await Acronym.findOneAndUpdate({ key: key.toLowerCase().trim() }, { value: value.trim() }, { upsert: true });
@@ -47,17 +44,16 @@ app.delete('/api/acronyms/:key', async (req, res) => {
     res.sendStatus(200);
 });
 
-// CHỐNG NGỦ (ANTI-SLEEP)
+// ANTI-SLEEP
 const RENDER_URL = process.env.RENDER_EXTERNAL_HOSTNAME ? `https://${process.env.RENDER_EXTERNAL_HOSTNAME}` : `http://localhost:3000`;
 app.get('/ping', (req, res) => res.send('pong'));
 setInterval(() => axios.get(`${RENDER_URL}/ping`).catch(() => {}), 5 * 60 * 1000);
 
-// XỬ LÝ VĂN BẢN (Từ cấm & Viết tắt)
+// XỬ LÝ VĂN BẢN
 async function processText(text) {
     let lowerText = text.toLowerCase();
     const banned = await BannedWord.find();
     for (let b of banned) { if (lowerText.includes(b.word)) return null; }
-
     const acronyms = await Acronym.find();
     let finalChat = text;
     acronyms.forEach(a => {
@@ -88,6 +84,7 @@ io.on('connection', (socket) => {
         startTime = Date.now();
         tiktok.connect().then(() => socket.emit('status', `Đã kết nối: ${username}`));
 
+        // 1. CHAT
         tiktok.on('chat', async (data) => {
             if (Date.now() > startTime) {
                 const finalContent = await processText(data.comment);
@@ -100,22 +97,25 @@ io.on('connection', (socket) => {
             }
         });
 
+        // 2. MEMBER VÀO PHÒNG BÌNH THƯỜNG
         tiktok.on('member', async (data) => {
             if (Date.now() > startTime) {
-                // TRUY XUẤT CHÍNH XÁC CẤP ĐỘ TIM ĐỘI (MÀU CAM)
                 let fLevel = 0;
-                if (data.fanTicket && data.fanTicket.level) {
-                    fLevel = data.fanTicket.level;
-                }
-
+                if (data.fanTicket && data.fanTicket.level) fLevel = data.fanTicket.level;
                 const audio = await getGoogleAudio(`Bèo ơi, anh ${data.nickname} ghé chơi nè`);
-                socket.emit('audio-data', { 
-                    type: 'welcome', 
-                    user: "Hệ thống", 
-                    comment: `Anh ${data.nickname} (Tim đội Lv.${fLevel}) vào`, 
-                    audio, 
-                    fanLevel: fLevel 
-                });
+                socket.emit('audio-data', { type: 'welcome', user: "Hệ thống", comment: `Anh ${data.nickname} (Tim đội Lv.${fLevel}) vào`, audio, fanLevel: fLevel });
+            }
+        });
+
+        // 3. NGƯỜI VÀO PHÒNG CÓ HIỆU ỨNG BAY (SOCIAL EVENT)
+        tiktok.on('social', async (data) => {
+            if (Date.now() > startTime && data.displayType.includes('join')) {
+                let fLevel = 0;
+                if (data.fanTicket && data.fanTicket.level) fLevel = data.fanTicket.level;
+                
+                // Câu chào đặc biệt cho khách quý bay trên màn hình
+                const audio = await getGoogleAudio(`Chào mừng khách quý, anh ${data.nickname} vừa ghé thăm Bèo`);
+                socket.emit('audio-data', { type: 'welcome', user: "Khách VIP", comment: `${data.nickname} (Tim đội Lv.${fLevel}) đang bay vào!`, audio, fanLevel: fLevel });
             }
         });
     });
