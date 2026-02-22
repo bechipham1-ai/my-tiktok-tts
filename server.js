@@ -49,7 +49,6 @@ const RENDER_URL = process.env.RENDER_EXTERNAL_HOSTNAME ? `https://${process.env
 app.get('/ping', (req, res) => res.send('pong'));
 setInterval(() => axios.get(`${RENDER_URL}/ping`).catch(() => {}), 5 * 60 * 1000);
 
-// XỬ LÝ VĂN BẢN
 async function processText(text) {
     let lowerText = text.toLowerCase();
     const banned = await BannedWord.find();
@@ -84,7 +83,6 @@ io.on('connection', (socket) => {
         startTime = Date.now();
         tiktok.connect().then(() => socket.emit('status', `Đã kết nối: ${username}`));
 
-        // 1. CHAT
         tiktok.on('chat', async (data) => {
             if (Date.now() > startTime) {
                 const finalContent = await processText(data.comment);
@@ -95,35 +93,16 @@ io.on('connection', (socket) => {
             }
         });
 
-        // HÀM CHÀO CHUNG (Dùng cho cả Member và RoomUser)
-        async function handleWelcome(data, isVip = false) {
-            if (Date.now() <= startTime) return;
-
-            let fLevel = 0;
-            if (data.fanTicket && data.fanTicket.level) fLevel = data.fanTicket.level;
-
-            const prefix = isVip ? "Chào mừng khách quý " : "Chào ";
-            const audio = await getGoogleAudio(`${prefix} ${data.nickname} vừa ghé chơi nè`);
-            
-            socket.emit('audio-data', { 
-                type: 'welcome', 
-                user: isVip ? "KHÁCH VIP" : "Hệ thống", 
-                comment: `${data.nickname} đã tham gia (Lv.${fLevel})`, 
-                audio, 
-                fanLevel: fLevel 
-            });
-        }
-
-        // 2. MEMBER VÀO PHÒNG (Dòng chữ phía dưới)
-        tiktok.on('member', (data) => handleWelcome(data, false));
-
-        // 3. ROOM USER (Dòng chữ bay phía trên - Cấp cao)
-        tiktok.on('roomUser', (data) => handleWelcome(data, true));
-        
-        // 4. DỰ PHÒNG SOCIAL (Một số trường hợp VIP khác)
-        tiktok.on('social', (data) => {
-            if (data.displayType && data.displayType.includes('join')) {
-                handleWelcome(data, true);
+        tiktok.on('member', async (data) => {
+            if (Date.now() > startTime) {
+                // Chào tất cả mọi người vào phòng, không check level
+                const audio = await getGoogleAudio(`Bèo ơi, anh ${data.nickname} ghé chơi nè`);
+                socket.emit('audio-data', { 
+                    type: 'welcome', 
+                    user: "Hệ thống", 
+                    comment: `${data.nickname} đã tham gia`, 
+                    audio 
+                });
             }
         });
     });
