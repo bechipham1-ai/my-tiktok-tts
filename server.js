@@ -12,9 +12,9 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.json());
 
-// KẾT NỐI DATABASE
+// KẾT NỐI DATABASE (MongoDB của bạn)
 const MONGODB_URI = "mongodb+srv://baoboi97:baoboi97@cluster0.skkajlz.mongodb.net/tiktok_tts?retryWrites=true&w=majority&appName=Cluster0";
-mongoose.connect(MONGODB_URI).then(() => console.log("✅ Kết nối MongoDB thành công"));
+mongoose.connect(MONGODB_URI).then(() => console.log("✅ MongoDB Connected"));
 
 const BannedWord = mongoose.model('BannedWord', { word: String });
 const Acronym = mongoose.model('Acronym', { key: String, value: String });
@@ -44,32 +44,24 @@ app.delete('/api/acronyms/:key', async (req, res) => {
     res.sendStatus(200);
 });
 
-// ANTI-SLEEP
+// ANTI-SLEEP (Chống ngủ trên Render)
 const RENDER_URL = process.env.RENDER_EXTERNAL_HOSTNAME ? `https://${process.env.RENDER_EXTERNAL_HOSTNAME}` : `http://localhost:3000`;
 app.get('/ping', (req, res) => res.send('pong'));
 setInterval(() => axios.get(`${RENDER_URL}/ping`).catch(() => {}), 5 * 60 * 1000);
 
-// XỬ LÝ VĂN BẢN (ĐÃ FIX LỖI VIẾT TẮT)
+// HÀM XỬ LÝ CHỮ (FIX LỖI VIẾT TẮT)
 async function processText(text) {
     let lowerText = text.toLowerCase();
-    
-    // 1. Kiểm tra từ cấm
     const banned = await BannedWord.find();
-    for (let b of banned) { 
-        if (lowerText.includes(b.word)) return null; 
-    }
-
-    // 2. Thay thế từ viết tắt (Sử dụng ranh giới từ \b)
+    for (let b of banned) { if (lowerText.includes(b.word)) return null; }
+    
     const acronyms = await Acronym.find();
     let finalChat = text;
-    
     acronyms.forEach(a => {
-        // \b giúp phân biệt "a" độc lập với "a" trong "nữa"
-        // Thêm 'u' flag để hỗ trợ tiếng Việt có dấu tốt hơn
+        // Regex thông minh: Chỉ thay thế khi từ đứng độc lập, không thay thế chữ nằm trong từ khác
         const regex = new RegExp(`(?<!\\p{L})${a.key}(?!\\p{L})`, 'giu');
         finalChat = finalChat.replace(regex, a.value);
     });
-    
     return finalChat;
 }
 
@@ -94,35 +86,44 @@ io.on('connection', (socket) => {
         startTime = Date.now();
         tiktok.connect().then(() => socket.emit('status', `Đã kết nối: ${username}`));
 
+        // 1. ĐỌC CHAT
         tiktok.on('chat', async (data) => {
             if (Date.now() > startTime) {
                 const finalContent = await processText(data.comment);
                 if (finalContent) {
                     const audio = await getGoogleAudio(`${data.nickname} nói: ${finalContent}`);
-                    socket.emit('audio-data', { 
-                        type: 'chat', 
-                        user: data.nickname, 
-                        comment: data.comment, 
-                        processed: finalContent, 
-                        audio 
-                    });
+                    socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: data.comment, processed: finalContent, audio });
                 }
             }
         });
 
+        // 2. CHÀO NGƯỜI VÀO
         tiktok.on('member', async (data) => {
             if (Date.now() > startTime) {
                 const audio = await getGoogleAudio(`Bèo ơi, anh ${data.nickname} ghé chơi nè`);
-                socket.emit('audio-data', { 
-                    type: 'welcome', 
-                    user: "Hệ thống", 
-                    comment: `${data.nickname} đã tham gia`, 
-                    audio 
-                });
+                socket.emit('audio-data', { type: 'welcome', user: "Hệ thống", comment: `${data.nickname} đã tham gia`, audio });
+            }
+        });
+
+        // 3. CẢM ƠN QUÀ TẶNG (GÓP GẠO)
+        tiktok.on('gift', async (data) => {
+            if (data.gift && data.repeatEnd) {
+                const giftMsg = `Cảm ơn ${data.nickname} đã góp gạo nuôi Bèo`;
+                const audio = await getGoogleAudio(giftMsg);
+                socket.emit('audio-data', { type: 'gift', user: "GÓP GẠO", comment: `${data.nickname} tặng ${data.giftName}`, audio });
+            }
+        });
+
+        // 4. CẢM ƠN FOLLOW
+        tiktok.on('follow', async (data) => {
+            if (Date.now() > startTime) {
+                const followMsg = `Cảm ơn ${data.nickname} đã follow em`;
+                const audio = await getGoogleAudio(followMsg);
+                socket.emit('audio-data', { type: 'follow', user: "FOLLOW", comment: `${data.nickname} đã theo dõi`, audio });
             }
         });
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server chạy tại port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
