@@ -44,17 +44,29 @@ const RENDER_URL = process.env.RENDER_EXTERNAL_HOSTNAME ? `https://${process.env
 app.get('/ping', (req, res) => res.send('pong'));
 setInterval(() => axios.get(`${RENDER_URL}/ping`).catch(() => {}), 5 * 60 * 1000);
 
+// --- HÀM XỬ LÝ VĂN BẢN (CHỐNG ĐỌC SỐ ĐIỆN THOẠI) ---
 async function processText(text) {
-    let lowerText = text.toLowerCase();
+    if (!text) return null;
+    let processed = text;
+
+    // 1. Kiểm tra từ cấm
+    let lowerText = processed.toLowerCase();
     const banned = await BannedWord.find();
     for (let b of banned) { if (lowerText.includes(b.word)) return null; }
+
+    // 2. GIỚI HẠN CHỮ SỐ: Tìm các chuỗi số và chỉ giữ lại tối đa 2 chữ số đầu
+    // Regex \d{2,}: tìm chuỗi có từ 2 chữ số trở lên. 
+    // Hàm replace sẽ lấy 2 số đầu ($1) và bỏ phần còn lại.
+    processed = processed.replace(/(\d{2})\d+/g, '$1');
+
+    // 3. Thay thế viết tắt
     const acronyms = await Acronym.find();
-    let finalChat = text;
     acronyms.forEach(a => {
         const regex = new RegExp(`(?<!\\p{L})${a.key}(?!\\p{L})`, 'giu');
-        finalChat = finalChat.replace(regex, a.value);
+        processed = processed.replace(regex, a.value);
     });
-    return finalChat;
+
+    return processed;
 }
 
 async function getGoogleAudio(text) {
@@ -90,21 +102,25 @@ io.on('connection', (socket) => {
 
         tiktok.on('member', async (data) => {
             if (Date.now() > startTime) {
-                const audio = await getGoogleAudio(`Bèo ơi, anh ${data.nickname} ghé chơi nè`);
+                // Xử lý cả nickname để tránh nickname chứa số điện thoại
+                const safeName = await processText(data.nickname);
+                const audio = await getGoogleAudio(`Bèo ơi, anh ${safeName} ghé chơi nè`);
                 socket.emit('audio-data', { type: 'welcome', user: "Hệ thống", comment: `${data.nickname} đã tham gia`, audio });
             }
         });
 
         tiktok.on('gift', async (data) => {
             if (data.gift && data.repeatEnd) {
-                const audio = await getGoogleAudio(`Cảm ơn ${data.nickname} đã góp gạo nuôi Bèo`);
+                const safeName = await processText(data.nickname);
+                const audio = await getGoogleAudio(`Cảm ơn ${safeName} đã góp gạo nuôi Bèo`);
                 socket.emit('audio-data', { type: 'gift', user: "GÓP GẠO", comment: `${data.nickname} tặng ${data.giftName}`, audio });
             }
         });
 
         tiktok.on('follow', async (data) => {
             if (Date.now() > startTime) {
-                const audio = await getGoogleAudio(`Cảm ơn ${data.nickname} đã follow em`);
+                const safeName = await processText(data.nickname);
+                const audio = await getGoogleAudio(`Cảm ơn ${safeName} đã follow em`);
                 socket.emit('audio-data', { type: 'follow', user: "FOLLOW", comment: `${data.nickname} đã theo dõi`, audio });
             }
         });
@@ -112,4 +128,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server chạy tại port ${PORT}`));
