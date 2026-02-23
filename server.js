@@ -17,8 +17,9 @@ mongoose.connect(MONGODB_URI).then(() => console.log("✅ MongoDB Connected"));
 
 const BannedWord = mongoose.model('BannedWord', { word: String });
 const Acronym = mongoose.model('Acronym', { key: String, value: String });
+const EmojiMap = mongoose.model('EmojiMap', { icon: String, text: String }); // Schema mới cho Icon
 
-// API QUẢN TRỊ
+// --- API QUẢN TRỊ ---
 app.get('/api/words', async (req, res) => res.json((await BannedWord.find()).map(w => w.word)));
 app.post('/api/words', async (req, res) => {
     const word = req.body.word ? req.body.word.toLowerCase().trim() : "";
@@ -29,6 +30,7 @@ app.delete('/api/words/:word', async (req, res) => {
     await BannedWord.deleteOne({ word: req.params.word });
     res.sendStatus(200);
 });
+
 app.get('/api/acronyms', async (req, res) => res.json(await Acronym.find()));
 app.post('/api/acronyms', async (req, res) => {
     const { key, value } = req.body;
@@ -40,7 +42,19 @@ app.delete('/api/acronyms/:key', async (req, res) => {
     res.sendStatus(200);
 });
 
-// HÀM KIỂM TRA TỪ CẤM (Dùng cho cả nội dung và Nickname)
+// API cho ICON
+app.get('/api/emojis', async (req, res) => res.json(await EmojiMap.find()));
+app.post('/api/emojis', async (req, res) => {
+    const { icon, text } = req.body;
+    if (icon && text) await EmojiMap.findOneAndUpdate({ icon: icon.trim() }, { text: text.trim() }, { upsert: true });
+    res.sendStatus(200);
+});
+app.delete('/api/emojis/:id', async (req, res) => {
+    await EmojiMap.findByIdAndDelete(req.params.id);
+    res.sendStatus(200);
+});
+
+// HÀM XỬ LÝ CHÍNH
 async function isBanned(text) {
     if (!text) return true;
     const lowerText = text.toLowerCase();
@@ -48,15 +62,22 @@ async function isBanned(text) {
     return banned.some(b => lowerText.includes(b.word));
 }
 
-// HÀM XỬ LÝ VĂN BẢN (CHỐNG ĐỌC SỐ ĐIỆN THOẠI)
 async function processText(text) {
     if (!text) return null;
     if (await isBanned(text)) return null;
 
     let processed = text;
-    // GIỚI HẠN CHỮ SỐ: Tìm các chuỗi số và chỉ giữ lại tối đa 2 chữ số đầu
+
+    // 1. Chuyển đổi ICON sang Văn bản
+    const emojis = await EmojiMap.find();
+    emojis.forEach(e => {
+        processed = processed.split(e.icon).join(" " + e.text + " ");
+    });
+
+    // 2. Cắt số dài (giữ 2 số)
     processed = processed.replace(/(\d{2})\d+/g, '$1');
 
+    // 3. Viết tắt
     const acronyms = await Acronym.find();
     acronyms.forEach(a => {
         const regex = new RegExp(`(?<!\\p{L})${a.key}(?!\\p{L})`, 'giu');
@@ -66,24 +87,19 @@ async function processText(text) {
     return processed;
 }
 
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-
+// ... (Phần Socket.io giữ nguyên logic như bản trước của bạn) ...
 io.on('connection', (socket) => {
     let tiktok;
     let startTime = 0;
-
     socket.on('set-username', (username) => {
         if (tiktok) tiktok.disconnect();
         tiktok = new WebcastPushConnection(username, { processInitialData: false });
         startTime = Date.now();
         tiktok.connect().then(() => socket.emit('status', `Đã kết nối: ${username}`));
 
-        // 1. ĐỌC CHAT
         tiktok.on('chat', async (data) => {
             if (Date.now() > startTime) {
-                // Kiểm tra nếu nickname của họ nằm trong từ cấm thì bỏ qua luôn
                 if (await isBanned(data.nickname)) return;
-
                 const finalContent = await processText(data.comment);
                 if (finalContent) {
                     const audio = await getGoogleAudio(`${data.nickname} nói: ${finalContent}`);
@@ -91,35 +107,23 @@ io.on('connection', (socket) => {
                 }
             }
         });
-
-        // 2. CHÀO NGƯỜI VÀO
+        // (Các sự kiện welcome, gift, follow giữ nguyên...)
         tiktok.on('member', async (data) => {
-            if (Date.now() > startTime) {
-                // Nếu tên người vào phòng có từ cấm -> Không chào
-                if (await isBanned(data.nickname)) return;
-
+            if (Date.now() > startTime && !(await isBanned(data.nickname))) {
                 const safeName = await processText(data.nickname);
                 const audio = await getGoogleAudio(`Bèo ơi, anh ${safeName} ghé chơi nè`);
                 socket.emit('audio-data', { type: 'welcome', user: "Hệ thống", comment: `${data.nickname} đã tham gia`, audio });
             }
         });
-
-        // 3. TẶNG QUÀ
         tiktok.on('gift', async (data) => {
-            if (data.gift && data.repeatEnd) {
-                if (await isBanned(data.nickname)) return;
-
+            if (data.gift && data.repeatEnd && !(await isBanned(data.nickname))) {
                 const safeName = await processText(data.nickname);
                 const audio = await getGoogleAudio(`Cảm ơn ${safeName} đã góp gạo nuôi Bèo`);
                 socket.emit('audio-data', { type: 'gift', user: "GÓP GẠO", comment: `${data.nickname} tặng ${data.giftName}`, audio });
             }
         });
-
-        // 4. FOLLOW
         tiktok.on('follow', async (data) => {
-            if (Date.now() > startTime) {
-                if (await isBanned(data.nickname)) return;
-
+            if (Date.now() > startTime && !(await isBanned(data.nickname))) {
                 const safeName = await processText(data.nickname);
                 const audio = await getGoogleAudio(`Cảm ơn ${safeName} đã follow em`);
                 socket.emit('audio-data', { type: 'follow', user: "FOLLOW", comment: `${data.nickname} đã theo dõi`, audio });
@@ -137,4 +141,4 @@ async function getGoogleAudio(text) {
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server chạy port ${PORT}`));
