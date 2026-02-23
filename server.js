@@ -40,26 +40,23 @@ app.delete('/api/acronyms/:key', async (req, res) => {
     res.sendStatus(200);
 });
 
-const RENDER_URL = process.env.RENDER_EXTERNAL_HOSTNAME ? `https://${process.env.RENDER_EXTERNAL_HOSTNAME}` : `http://localhost:3000`;
-app.get('/ping', (req, res) => res.send('pong'));
-setInterval(() => axios.get(`${RENDER_URL}/ping`).catch(() => {}), 5 * 60 * 1000);
+// HÀM KIỂM TRA TỪ CẤM (Dùng cho cả nội dung và Nickname)
+async function isBanned(text) {
+    if (!text) return true;
+    const lowerText = text.toLowerCase();
+    const banned = await BannedWord.find();
+    return banned.some(b => lowerText.includes(b.word));
+}
 
-// --- HÀM XỬ LÝ VĂN BẢN (CHỐNG ĐỌC SỐ ĐIỆN THOẠI) ---
+// HÀM XỬ LÝ VĂN BẢN (CHỐNG ĐỌC SỐ ĐIỆN THOẠI)
 async function processText(text) {
     if (!text) return null;
+    if (await isBanned(text)) return null;
+
     let processed = text;
-
-    // 1. Kiểm tra từ cấm
-    let lowerText = processed.toLowerCase();
-    const banned = await BannedWord.find();
-    for (let b of banned) { if (lowerText.includes(b.word)) return null; }
-
-    // 2. GIỚI HẠN CHỮ SỐ: Tìm các chuỗi số và chỉ giữ lại tối đa 2 chữ số đầu
-    // Regex \d{2,}: tìm chuỗi có từ 2 chữ số trở lên. 
-    // Hàm replace sẽ lấy 2 số đầu ($1) và bỏ phần còn lại.
+    // GIỚI HẠN CHỮ SỐ: Tìm các chuỗi số và chỉ giữ lại tối đa 2 chữ số đầu
     processed = processed.replace(/(\d{2})\d+/g, '$1');
 
-    // 3. Thay thế viết tắt
     const acronyms = await Acronym.find();
     acronyms.forEach(a => {
         const regex = new RegExp(`(?<!\\p{L})${a.key}(?!\\p{L})`, 'giu');
@@ -67,15 +64,6 @@ async function processText(text) {
     });
 
     return processed;
-}
-
-async function getGoogleAudio(text) {
-    try {
-        if (!text) return null;
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.substring(0, 200))}&tl=vi&client=tw-ob`;
-        const res = await axios.get(url, { responseType: 'arraybuffer' });
-        return `data:audio/mp3;base64,${Buffer.from(res.data, 'binary').toString('base64')}`;
-    } catch (e) { return null; }
 }
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -90,8 +78,12 @@ io.on('connection', (socket) => {
         startTime = Date.now();
         tiktok.connect().then(() => socket.emit('status', `Đã kết nối: ${username}`));
 
+        // 1. ĐỌC CHAT
         tiktok.on('chat', async (data) => {
             if (Date.now() > startTime) {
+                // Kiểm tra nếu nickname của họ nằm trong từ cấm thì bỏ qua luôn
+                if (await isBanned(data.nickname)) return;
+
                 const finalContent = await processText(data.comment);
                 if (finalContent) {
                     const audio = await getGoogleAudio(`${data.nickname} nói: ${finalContent}`);
@@ -100,25 +92,34 @@ io.on('connection', (socket) => {
             }
         });
 
+        // 2. CHÀO NGƯỜI VÀO
         tiktok.on('member', async (data) => {
             if (Date.now() > startTime) {
-                // Xử lý cả nickname để tránh nickname chứa số điện thoại
+                // Nếu tên người vào phòng có từ cấm -> Không chào
+                if (await isBanned(data.nickname)) return;
+
                 const safeName = await processText(data.nickname);
                 const audio = await getGoogleAudio(`Bèo ơi, anh ${safeName} ghé chơi nè`);
                 socket.emit('audio-data', { type: 'welcome', user: "Hệ thống", comment: `${data.nickname} đã tham gia`, audio });
             }
         });
 
+        // 3. TẶNG QUÀ
         tiktok.on('gift', async (data) => {
             if (data.gift && data.repeatEnd) {
+                if (await isBanned(data.nickname)) return;
+
                 const safeName = await processText(data.nickname);
                 const audio = await getGoogleAudio(`Cảm ơn ${safeName} đã góp gạo nuôi Bèo`);
                 socket.emit('audio-data', { type: 'gift', user: "GÓP GẠO", comment: `${data.nickname} tặng ${data.giftName}`, audio });
             }
         });
 
+        // 4. FOLLOW
         tiktok.on('follow', async (data) => {
             if (Date.now() > startTime) {
+                if (await isBanned(data.nickname)) return;
+
                 const safeName = await processText(data.nickname);
                 const audio = await getGoogleAudio(`Cảm ơn ${safeName} đã follow em`);
                 socket.emit('audio-data', { type: 'follow', user: "FOLLOW", comment: `${data.nickname} đã theo dõi`, audio });
@@ -127,5 +128,13 @@ io.on('connection', (socket) => {
     });
 });
 
+async function getGoogleAudio(text) {
+    try {
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.substring(0, 200))}&tl=vi&client=tw-ob`;
+        const res = await axios.get(url, { responseType: 'arraybuffer' });
+        return `data:audio/mp3;base64,${Buffer.from(res.data, 'binary').toString('base64')}`;
+    } catch (e) { return null; }
+}
+
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server chạy tại port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
