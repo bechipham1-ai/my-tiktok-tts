@@ -12,7 +12,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.json());
 
-// DATABASE
+// KẾT NỐI DATABASE
 const MONGODB_URI = "mongodb+srv://baoboi97:baoboi97@cluster0.skkajlz.mongodb.net/tiktok_tts?retryWrites=true&w=majority&appName=Cluster0";
 mongoose.connect(MONGODB_URI).then(() => console.log("✅ MongoDB Connected"));
 
@@ -31,6 +31,7 @@ app.delete('/api/words/:word', async (req, res) => {
     await BannedWord.deleteOne({ word: req.params.word });
     res.sendStatus(200);
 });
+
 app.get('/api/acronyms', async (req, res) => res.json(await Acronym.find()));
 app.post('/api/acronyms', async (req, res) => {
     const { key, value } = req.body;
@@ -41,6 +42,7 @@ app.delete('/api/acronyms/:key', async (req, res) => {
     await Acronym.deleteOne({ key: req.params.key });
     res.sendStatus(200);
 });
+
 app.get('/api/emojis', async (req, res) => res.json(await EmojiMap.find()));
 app.post('/api/emojis', async (req, res) => {
     const { icon, text } = req.body;
@@ -52,13 +54,14 @@ app.delete('/api/emojis/:id', async (req, res) => {
     res.sendStatus(200);
 });
 
-// XỬ LÝ TTS & TEXT
+// HÀM KIỂM TRA TỪ CẤM
 async function isBanned(text) {
     if (!text) return false;
     const banned = await BannedWord.find();
     return banned.some(b => text.toLowerCase().includes(b.word));
 }
 
+// HÀM XỬ LÝ VĂN BẢN (CHỐNG SĐT, VIẾT TẮT, ICON)
 async function processText(text) {
     if (!text || await isBanned(text)) return null;
     let processed = text;
@@ -92,17 +95,20 @@ io.on('connection', (socket) => {
         if (tiktok) tiktok.disconnect();
         tiktok = new WebcastPushConnection(username, { processInitialData: false });
         startTime = Date.now();
-        tiktok.connect().then(() => socket.emit('status', `Đã kết nối: ${username}`));
+        
+        tiktok.connect()
+            .then(() => socket.emit('status', `Đã kết nối: ${username}`))
+            .catch(err => socket.emit('status', `Lỗi: ${err.message}`));
 
-        // --- LOGIC NHẮC 20S CUỐI PK ---
+        // LOGIC PK 20S
         tiktok.on('linkMicBattle', () => {
             if (pkTimer) clearInterval(pkTimer);
-            let timeLeft = 300; // Mặc định 5 phút
+            let timeLeft = 300; 
             pkTimer = setInterval(async () => {
                 timeLeft--;
                 if (timeLeft === 20) {
                     const audio = await getGoogleAudio("thả bông 20 giây cuối bèo ơi");
-                    socket.emit('audio-data', { type: 'pk', user: "HỆ THỐNG", comment: "SẮP HẾT GIỜ PK!", audio });
+                    socket.emit('audio-data', { type: 'pk', user: "HỆ THỐNG", comment: "NHẮC PK 20S", audio });
                 }
                 if (timeLeft <= 0) clearInterval(pkTimer);
             }, 1000);
@@ -110,7 +116,7 @@ io.on('connection', (socket) => {
 
         tiktok.on('linkMicArmBattle', () => { if (pkTimer) clearInterval(pkTimer); });
 
-        // --- ĐỌC CHAT ---
+        // ĐỌC CHAT
         tiktok.on('chat', async (data) => {
             if (Date.now() > startTime && !(await isBanned(data.nickname))) {
                 const finalContent = await processText(data.comment);
@@ -121,7 +127,7 @@ io.on('connection', (socket) => {
             }
         });
 
-        // --- CÁC SỰ KIỆN KHÁC ---
+        // CHÀO MỪNG
         tiktok.on('member', async (data) => {
             if (Date.now() > startTime && !(await isBanned(data.nickname))) {
                 const safeName = await processText(data.nickname);
@@ -130,6 +136,7 @@ io.on('connection', (socket) => {
             }
         });
 
+        // QUÀ TẶNG
         tiktok.on('gift', async (data) => {
             if (data.gift && data.repeatEnd && !(await isBanned(data.nickname))) {
                 const safeName = await processText(data.nickname);
@@ -138,15 +145,16 @@ io.on('connection', (socket) => {
             }
         });
 
+        // FOLLOW
         tiktok.on('follow', async (data) => {
             if (Date.now() > startTime && !(await isBanned(data.nickname))) {
                 const safeName = await processText(data.nickname);
                 const audio = await getGoogleAudio(`Cảm ơn ${safeName} đã follow em`);
-                socket.emit('audio-data', { type: 'follow', user: "FOLLOW", comment: `${data.nickname} đã theo dõi`, audio });
+                socket.emit('audio-data', { type: 'follow', user: "FOLLOW", comment: `${data.nickname} theo dõi`, audio });
             }
         });
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server chạy tại cổng ${PORT}`));
