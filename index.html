@@ -6,124 +6,73 @@
     <title>Bèo Control 🌸 Cute Edition</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
         :root {
-            /* Bảng màu hồng dễ thương */
-            --primary: #ff85a2; /* Hồng đậm điểm nhấn */
-            --bg: #fff5f7; /* Hồng cực nhạt nền */
-            --card: #ffffff; /* Trắng bảng tin */
-            --text: #5d4037; /* Nâu ấm chữ (nhẹ hơn đen) */
-            --border: #f8bbd0; /* Hồng nhạt viền */
-            --accent: #4dd0e1; /* Xanh ngọc điểm xuyết */
-            --shadow: 0 4px 15px rgba(248, 187, 208, 0.4); /* Đổ bóng hồng mịn */
+            --primary: #ff85a2; --bg: #fff5f7; --card: #ffffff; --text: #5d4037;
+            --border: #f8bbd0; --accent: #4dd0e1; --shadow: 0 4px 15px rgba(248, 187, 208, 0.4);
         }
-
         body {
-            font-family: 'Quicksand', 'Segoe UI', system-ui, sans-serif; /* Font chữ tròn trịa, mềm mại */
-            background: var(--bg); color: var(--text); margin: 0;
-            display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+            font-family: 'Quicksand', sans-serif; background: var(--bg); color: var(--text);
+            margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden;
         }
-
-        /* Sidebar cho PC - Header cho Mobile */
         .header-panel {
             background: var(--card); border-bottom: 2px solid var(--border);
-            padding: 20px; display: flex; flex-direction: column; gap: 12px;
-            z-index: 10; border-radius: 0 0 25px 25px; /* Bo góc dưới */
-            box-shadow: var(--shadow);
+            padding: 15px; display: flex; flex-direction: column; gap: 10px;
+            z-index: 10; border-radius: 0 0 25px 25px; box-shadow: var(--shadow);
         }
-
-        h2 { color: var(--primary); margin: 0; font-size: 22px; text-align: center; font-weight: 700; letter-spacing: 1px; }
-
-        .conn-box { display: flex; gap: 10px; }
+        h2 { color: var(--primary); margin: 0; font-size: 20px; text-align: center; font-weight: 700; }
+        .conn-box { display: flex; gap: 8px; }
         input {
             background: #fff; border: 2px solid var(--border); color: var(--text);
-            padding: 12px; border-radius: 15px; outline: none; flex: 1; font-size: 14px;
-            transition: 0.3s;
+            padding: 10px; border-radius: 12px; outline: none; flex: 1; font-size: 14px;
         }
-        input:focus { border-color: var(--primary); box-shadow: 0 0 5px rgba(255, 133, 162, 0.5); }
-        input::placeholder { color: #bcaaa4; }
-
         button {
-            background: var(--primary); color: white; border: none; padding: 12px 20px;
-            border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 14px;
-            transition: 0.3s; box-shadow: 0 2px 5px rgba(255, 133, 162, 0.3);
+            background: var(--primary); color: white; border: none; padding: 10px 15px;
+            border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;
         }
-        button:hover { opacity: 0.9; transform: scale(1.03); }
-
-        /* Group Toggle - Dàn hàng ngang trên Mobile */
+        button:active { transform: scale(0.95); }
+        .status-tag { font-size: 12px; text-align: center; font-weight: 700; margin-top: 5px; min-height: 15px; transition: 0.3s; }
         .toggle-group {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
-            background: #fff0f3; padding: 12px; border-radius: 18px;
-            border: 1px solid var(--border);
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+            background: #fff0f3; padding: 10px; border-radius: 18px; border: 1px solid var(--border);
         }
-        .toggle-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; color: #8d6e63; }
-
-        /* Switch UI Cute */
-        .switch { position: relative; width: 40px; height: 22px; }
+        .toggle-item { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; }
+        .switch { position: relative; width: 34px; height: 18px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #e0e0e0; transition: .4s; border-radius: 20px; }
-        .slider:before {
-            position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
-            background-color: white; transition: .4s; border-radius: 50%;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
+        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--primary); }
-        input:checked + .slider:before { transform: translateX(18px); }
-
-        /* Main Area */
-        .main-content {
-            flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 15px; gap: 15px;
-        }
-
-        .panel { background: var(--card); border-radius: 25px; border: 2px solid var(--border); display: flex; flex-direction: column; box-shadow: var(--shadow); overflow: hidden;}
-        
-        .tab-header { padding: 12px; background: #fff0f3; display: flex; justify-content: space-around; border-radius: 23px 23px 0 0; border-bottom: 1px solid var(--border); }
-        .tab { padding: 7px 15px; border-radius: 12px; cursor: pointer; font-size: 12px; color: #8d6e63; font-weight: 700; transition: 0.3s; }
-        .tab.active { background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(255, 133, 162, 0.3); }
-
-        .add-box { padding: 12px; display: flex; gap: 8px; border-bottom: 1px solid var(--border); background: #fffbfd; }
-        .data-list { height: 160px; overflow-y: auto; padding: 12px; background: #fffbfd; }
+        input:checked + .slider:before { transform: translateX(16px); }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 12px; gap: 12px; }
+        .panel { background: var(--card); border-radius: 20px; border: 2px solid var(--border); display: flex; flex-direction: column; box-shadow: var(--shadow); overflow: hidden; }
+        .tab-header { padding: 10px; background: #fff0f3; display: flex; justify-content: space-around; border-bottom: 1px solid var(--border); }
+        .tab { padding: 5px 12px; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 700; color: #8d6e63; transition: 0.3s; }
+        .tab.active { background: var(--primary); color: white; }
+        .add-box { padding: 12px; display: flex; gap: 6px; border-bottom: 1px solid var(--border); background: #fffbfd; }
+        .data-list { height: 150px; overflow-y: auto; padding: 10px; background: #fffbfd; }
         .chat-list { flex: 1; overflow-y: auto; padding: 12px; min-height: 250px; background: #fffbfd; }
-
-        .item { display: flex; justify-content: space-between; padding: 10px; background: #fff; border-radius: 12px; margin-bottom: 8px; font-size: 13px; border: 1px solid #fce4ec; box-shadow: 0 1px 3px rgba(248, 187, 208, 0.2); }
-        .chat-msg { padding: 10px; border-radius: 15px; margin-bottom: 8px; background: #fff; font-size: 14px; border-left: 4px solid var(--primary); box-shadow: 0 2px 4px rgba(248, 187, 208, 0.2); line-height: 1.4; }
+        .item { display: flex; justify-content: space-between; padding: 8px 12px; background: #fff; border-radius: 10px; margin-bottom: 6px; font-size: 13px; border: 1px solid #fce4ec; }
+        .chat-msg { padding: 10px; border-radius: 12px; margin-bottom: 8px; background: #fff; font-size: 14px; border-left: 4px solid var(--primary); box-shadow: 0 2px 4px rgba(248, 187, 208, 0.1); }
         .chat-msg b { color: var(--primary); }
+        .del { color: #e57373; font-weight: bold; cursor: pointer; padding: 0 5px; }
 
-        .del { color: #e57373; font-weight: bold; padding: 0 5px; cursor: pointer; font-size: 16px; }
-        .del:hover { color: #d32f2f; }
-
-        /* Custom Scrollbar - Hồng nhạt xinh xắn */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #fff5f7; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb { background: #f8bbd0; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #ff85a2; }
-
-        /* PC View */
         @media (min-width: 768px) {
             body { flex-direction: row; }
-            .header-panel { width: 300px; height: 100vh; border-right: 2px solid var(--border); border-bottom: none; border-radius: 0 25px 25px 0; padding: 30px 25px; }
-            h2 { font-size: 26px; }
-            .toggle-group { grid-template-columns: 1fr; gap: 15px; padding: 18px; }
-            .toggle-item { font-size: 14px; }
-            .main-content { display: grid; grid-template-columns: 1fr 1fr; padding: 25px; gap: 25px; }
+            .header-panel { width: 300px; height: 100vh; border-right: 2px solid var(--border); border-bottom: none; border-radius: 0 25px 25px 0; }
+            .toggle-group { grid-template-columns: 1fr; gap: 12px; }
+            .main-content { display: grid; grid-template-columns: 1fr 1fr; padding: 20px; gap: 20px; }
             .data-list { height: auto; }
-            .conn-box, input, button, .toggle-group, .panel, .tab, .item, .chat-msg { border-radius: 20px; }
-            .tab-header { border-radius: 18px 18px 0 0; }
         }
-        
-        /* Nhúng font Quicksand từ Google Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
     </style>
 </head>
 <body>
-
     <div class="header-panel">
         <h2>BÈO CONTROL 🌸</h2>
         <div class="conn-box">
-            <input type="text" id="user" placeholder="ID TikTok búp bê...">
+            <input type="text" id="user" placeholder="ID TikTok...">
             <button onclick="start()">Mở ✨</button>
         </div>
-        <div id="stt" style="font-size: 12px; text-align: center; color: var(--accent); font-weight: 600;">💖 Sẵn sàng</div>
-
+        <div id="stt" class="status-tag" style="color: var(--accent);">💖 Sẵn sàng</div>
         <div class="toggle-group">
             <div class="toggle-item"><span>👋 Chào nè</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
             <div class="toggle-item"><span>🎁 Quà ạ</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
@@ -131,48 +80,49 @@
             <div class="toggle-item"><span>⚔️ PK nha</span><label class="switch"><input type="checkbox" id="pkToggle" checked><span class="slider"></span></label></div>
         </div>
     </div>
-
     <div class="main-content">
         <div class="panel">
             <div class="tab-header">
-                <div class="tab active" id="btn-ban" onclick="switchTab('ban')">🚫 Cấm</div>
-                <div class="tab" id="btn-acr" onclick="switchTab('acr')">📝 Tắt</div>
-                <div class="tab" id="btn-emo" onclick="switchTab('emo')">😊 Icon</div>
-                <div class="tab" id="btn-bot" onclick="switchTab('bot')">💬 Bot</div>
+                <div class="tab active" id="btn-ban" onclick="switchTab('ban')">Cấm</div>
+                <div class="tab" id="btn-acr" onclick="switchTab('acr')">Tắt</div>
+                <div class="tab" id="btn-emo" onclick="switchTab('emo')">Icon</div>
+                <div class="tab" id="btn-bot" onclick="switchTab('bot')">Bot</div>
             </div>
             <div class="add-box">
-                <input type="text" id="inp-1" placeholder="Từ gì nè..." style="flex:2">
-                <input type="text" id="inp-2" placeholder="Nói là..." style="flex:1; display:none;">
-                <button onclick="handleAdd()" style="padding: 5px 15px; border-radius: 12px;">Thêm</button>
+                <input type="text" id="inp-1" placeholder="Từ..." style="flex:2">
+                <input type="text" id="inp-2" placeholder="Nói..." style="flex:1; display:none;">
+                <button onclick="handleAdd()">+</button>
             </div>
             <div class="data-list" id="data-display"></div>
         </div>
-
         <div class="panel">
-            <div style="padding: 15px; font-size: 14px; font-weight: 700; color: var(--primary); border-bottom: 1px solid var(--border); background: #fff0f3;">🌸 NHẬT KÝ LIVE</div>
+            <div style="padding: 12px; font-size: 13px; font-weight: 700; color: var(--primary); border-bottom: 1px solid var(--border); background: #fff0f3;">🌸 NHẬT KÝ LIVE</div>
             <div class="chat-list" id="chat"></div>
         </div>
     </div>
-
     <script>
         const socket = io();
         let curTab = 'ban';
         let queue = [], playing = false;
 
+        function updateStatus(text, color) {
+            const stt = document.getElementById('stt');
+            stt.innerText = text; stt.style.color = color;
+        }
+
         function switchTab(t) {
             curTab = t;
             document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
             document.getElementById(`btn-${t}`).classList.add('active');
-            const i1 = document.getElementById('inp-1'), i2 = document.getElementById('inp-2');
-            i2.style.display = (t === 'ban') ? 'none' : 'block';
+            document.getElementById('inp-2').style.display = (t === 'ban') ? 'none' : 'block';
             loadData();
         }
 
         async function loadData() {
             const display = document.getElementById('data-display');
-            display.innerHTML = '<p style="text-align:center; color:#bcaaa4; font-size:12px;">Đang tải nha...</p>';
-            const res = await (await fetch(`/api/${curTab==='ban'?'words':curTab==='acr'?'acronyms':curTab==='emo'?'emojis':'bot'}`)).json();
-            
+            display.innerHTML = '<p style="text-align:center; color:#bcaaa4; font-size:12px;">Đang tải...</p>';
+            const path = curTab==='ban'?'words':curTab==='acr'?'acronyms':curTab==='emo'?'emojis':'bot';
+            const res = await (await fetch(`/api/${path}`)).json();
             display.innerHTML = res.map(item => {
                 let text = curTab==='ban' ? item : (item.key || item.icon || item.keyword) + ' ➜ ' + (item.value || item.text || item.response);
                 let id = item._id || item;
@@ -191,13 +141,24 @@
         }
 
         async function delItem(id, word) {
-            let path = curTab==='ban'?'words/'+encodeURIComponent(word):curTab==='acr'?'acronyms/'+encodeURIComponent(id):curTab==='emo'?'emojis/'+id:'bot/'+id;
+            let path = curTab==='ban'?'words/'+encodeURIComponent(word):curTab==='acr'?'acronyms/'+id:curTab==='emo'?'emojis/'+id:'bot/'+id;
             await fetch(`/api/${path}`, { method: 'DELETE' });
             loadData();
         }
 
-        function start() { socket.emit('set-username', document.getElementById('user').value); }
-        
+        function start() { 
+            const user = document.getElementById('user').value;
+            if(!user) return updateStatus("Chưa nhập ID kìa! 😿", "#ff85a2");
+            updateStatus("Đang kết nối... ✨", "#4dd0e1");
+            socket.emit('set-username', user); 
+        }
+
+        socket.on('status', m => {
+            if(m.includes("✅") || m.includes("Đã kết nối")) updateStatus("Đã kết nối rồi nha! 💖", "#4dd0e1");
+            else if(m.includes("❌") || m.includes("Lỗi")) updateStatus("Lỗi rồi, thử lại nhé 😿", "#ff85a2");
+            else updateStatus(m, "#4dd0e1");
+        });
+
         socket.on('audio-data', d => {
             if (d.audio) {
                 if ((d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) ||
@@ -210,7 +171,7 @@
                 div.className = 'chat-msg';
                 div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
                 chat.prepend(div);
-                if (chat.childNodes.length > 40) chat.removeChild(chat.lastChild);
+                if (chat.childNodes.length > 30) chat.removeChild(chat.lastChild);
                 queue.push(d.audio); if (!playing) play();
             }
         });
@@ -220,7 +181,6 @@
             playing = true; const a = new Audio(queue.shift());
             a.onended = () => setTimeout(play, 400); a.play().catch(() => play());
         }
-        
         switchTab('ban');
     </script>
 </body>
