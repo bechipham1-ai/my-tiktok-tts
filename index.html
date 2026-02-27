@@ -2,123 +2,75 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>TTS IDOL BÈO - DASHBOARD</title>
+    <title>TTS IDOL BÈO - ADMIN</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root { --main: #fe2c55; --bg: #121212; --panel: #1e1e1e; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; display: flex; gap: 20px; height: 100vh; box-sizing: border-box; }
+        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; display: flex; gap: 20px; height: 100vh; box-sizing: border-box; }
         .column { background: var(--panel); padding: 20px; border-radius: 12px; border: 1px solid #333; display: flex; flex-direction: column; }
-        .left { flex: 1.5; border-color: var(--main); }
-        .right { flex: 2; }
-        input, button { padding: 12px; margin: 5px 0; border-radius: 8px; border: none; width: 100%; box-sizing: border-box; font-size: 14px; }
+        .left { flex: 1.5; } .right { flex: 2; }
+        input, button { padding: 10px; margin: 5px 0; border-radius: 6px; border: none; width: 100%; box-sizing: border-box; }
         button { background: var(--main); color: white; font-weight: bold; cursor: pointer; }
         #chat, .list-box { flex-grow: 1; overflow-y: auto; background: #000; padding: 10px; border-radius: 8px; margin-top: 10px; border: 1px solid #222; }
-        .msg { font-size: 13px; border-bottom: 1px solid #222; padding: 8px 0; }
-        .setting-row { display: flex; align-items: center; justify-content: space-between; background: #252525; padding: 10px; border-radius: 8px; margin: 5px 0; font-size: 13px; }
-        .tab-btn { background: #333; width: 32%; display: inline-block; padding: 10px; cursor: pointer; border-radius: 8px; font-size: 12px; }
+        .msg { font-size: 13px; border-bottom: 1px solid #222; padding: 5px 0; }
+        .setting-row { display: flex; align-items: center; justify-content: space-between; background: #252525; padding: 8px; border-radius: 8px; margin: 5px 0; font-size: 12px; }
+        .tab-btn { background: #333; width: 32%; display: inline-block; padding: 8px; border-radius: 6px; cursor: pointer; text-align: center; }
         .tab-active { background: var(--main); }
         .switch { position: relative; display: inline-block; width: 34px; height: 18px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 18px; }
-        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; border-radius: 18px; transition: .4s; }
+        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .4s; }
         input:checked + .slider { background-color: var(--main); }
         input:checked + .slider:before { transform: translateX(16px); }
     </style>
 </head>
 <body>
     <div class="column left">
-        <h3 style="color:var(--main); margin-top:0;">🎙️ IDOL BÈO LIVE</h3>
+        <h3 style="color:var(--main); margin:0;">🎙️ IDOL BÈO ADMIN</h3>
         <input type="text" id="user" placeholder="Nhập ID TikTok">
         <button onclick="start()">KẾT NỐI</button>
         <div class="setting-row"><span>🔊 Chào người vào:</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
         <div class="setting-row"><span>🎁 Cảm ơn quà:</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
         <div class="setting-row"><span>❤️ Cảm ơn Follow:</span><label class="switch"><input type="checkbox" id="followToggle" checked><span class="slider"></span></label></div>
-        <p id="stt" style="color:#00f2ea; font-size:12px;">Trạng thái: Sẵn sàng</p>
         <div id="chat"></div>
     </div>
-
     <div class="column right">
-        <div style="margin-bottom: 15px;">
-            <button class="tab-btn tab-active" id="btn-ban" onclick="switchTab('ban')">TỪ CẤM</button>
-            <button class="tab-btn" id="btn-acr" onclick="switchTab('acr')">VIẾT TẮT</button>
-            <button class="tab-btn" id="btn-emo" onclick="switchTab('emo')">ICON</button>
+        <div>
+            <div class="tab-btn tab-active" id="btn-ban" onclick="switchTab('ban')">TỪ CẤM</div>
+            <div class="tab-btn" id="btn-acr" onclick="switchTab('acr')">VIẾT TẮT</div>
+            <div class="tab-btn" id="btn-emo" onclick="switchTab('emo')">ICON</div>
         </div>
-
-        <div id="tab-ban-ui">
-            <input type="text" id="new-word" placeholder="Nhập từ muốn chặn...">
-            <button onclick="addWord()">THÊM TỪ CẤM</button>
-            <div class="list-box" id="word-list"></div>
-        </div>
-
-        <div id="tab-acr-ui" style="display:none;">
-            <input type="text" id="acr-key" placeholder="Viết tắt (vd: a)">
-            <input type="text" id="acr-val" placeholder="Dịch ra (vd: anh)">
-            <button onclick="addAcr()">THÊM VIẾT TẮT</button>
-            <div class="list-box" id="acr-list"></div>
-        </div>
-
-        <div id="tab-emo-ui" style="display:none;">
-            <input type="text" id="emo-icon" placeholder="Icon (vd: ❤️)">
-            <input type="text" id="emo-text" placeholder="Cách đọc (vd: bắn tim)">
-            <button onclick="addEmo()">THÊM ICON</button>
-            <div class="list-box" id="emo-list"></div>
-        </div>
+        <div id="tab-ban-ui"><input type="text" id="new-word" placeholder="Chặn..."><button onclick="addWord()">THÊM</button><div class="list-box" id="word-list"></div></div>
+        <div id="tab-acr-ui" style="display:none;"><input type="text" id="acr-key" placeholder="Viết tắt"><input type="text" id="acr-val" placeholder="Dịch"><button onclick="addAcr()">THÊM</button><div class="list-box" id="acr-list"></div></div>
+        <div id="tab-emo-ui" style="display:none;"><input type="text" id="emo-icon" placeholder="Icon"><input type="text" id="emo-text" placeholder="Đọc là"><button onclick="addEmo()">THÊM</button><div class="list-box" id="emo-list"></div></div>
     </div>
-
     <script>
         const socket = io();
         let queue = [], playing = false;
-
         function switchTab(t) {
-            ['ban','acr','emo'].forEach(tab => document.getElementById(`tab-${tab}-ui`).style.display = tab === t ? 'block' : 'none');
-            ['ban','acr','emo'].forEach(tab => document.getElementById(`btn-${tab}`).className = 'tab-btn' + (tab === t ? ' tab-active' : ''));
+            ['ban','acr','emo'].forEach(tab => { document.getElementById(`tab-${tab}-ui`).style.display = tab === t ? 'block' : 'none'; document.getElementById(`btn-${tab}`).classList.toggle('tab-active', tab === t); });
         }
-
-        async function loadEmojis() {
-            const res = await fetch('/api/emojis'); const data = await res.json();
-            document.getElementById('emo-list').innerHTML = data.map(e => `<div class="msg" style="display:flex; justify-content:space-between;"><span>${e.icon} ➔ ${e.text}</span><span style="color:red; cursor:pointer;" onclick="delEmo('${e._id}')">XÓA</span></div>`).join('');
+        async function loadData() {
+            const words = await (await fetch('/api/words')).json();
+            document.getElementById('word-list').innerHTML = words.map(w => `<div class="msg"><span>${w}</span> <span onclick="delWord('${w}')" style="color:red; float:right; cursor:pointer;">XÓA</span></div>`).join('');
+            const acrs = await (await fetch('/api/acronyms')).json();
+            document.getElementById('acr-list').innerHTML = acrs.map(a => `<div class="msg"><span>${a.key} ➜ ${a.value}</span> <span onclick="delAcr('${a.key}')" style="color:red; float:right; cursor:pointer;">XÓA</span></div>`).join('');
+            const emos = await (await fetch('/api/emojis')).json();
+            document.getElementById('emo-list').innerHTML = emos.map(e => `<div class="msg"><span>${e.icon} ➜ ${e.text}</span> <span onclick="delEmo('${e._id}')" style="color:red; float:right; cursor:pointer;">XÓA</span></div>`).join('');
         }
-        async function addEmo() {
-            const icon = document.getElementById('emo-icon').value; const text = document.getElementById('emo-text').value;
-            if(!icon || !text) return;
-            await fetch('/api/emojis', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({icon, text}) });
-            document.getElementById('emo-icon').value = ''; document.getElementById('emo-text').value = ''; loadEmojis();
-        }
-        async function delEmo(id) { await fetch(`/api/emojis/${id}`, { method: 'DELETE' }); loadEmojis(); }
-
-        async function loadAcronyms() {
-            const res = await fetch('/api/acronyms'); const data = await res.json();
-            document.getElementById('acr-list').innerHTML = data.map(a => `<div class="msg" style="display:flex; justify-content:space-between;"><span>${a.key} ➔ ${a.value}</span><span style="color:red; cursor:pointer;" onclick="delAcr('${a.key}')">XÓA</span></div>`).join('');
-        }
-        async function addAcr() {
-            const key = document.getElementById('acr-key').value; const value = document.getElementById('acr-val').value;
-            if(!key || !value) return;
-            await fetch('/api/acronyms', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({key, value}) });
-            document.getElementById('acr-key').value = ''; document.getElementById('acr-val').value = ''; loadAcronyms();
-        }
-        async function delAcr(key) { await fetch(`/api/acronyms/${encodeURIComponent(key)}`, { method: 'DELETE' }); loadAcronyms(); }
-
-        async function loadWords() {
-            const res = await fetch('/api/words'); const data = await res.json();
-            document.getElementById('word-list').innerHTML = data.map(w => `<div class="msg" style="display:flex; justify-content:space-between;"><span>${w}</span><span style="color:red; cursor:pointer;" onclick="delWord('${w}')">XÓA</span></div>`).join('');
-        }
-        async function addWord() {
-            const word = document.getElementById('new-word').value;
-            if(!word) return;
-            await fetch('/api/words', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({word}) });
-            document.getElementById('new-word').value = ''; loadWords();
-        }
-        async function delWord(word) { await fetch(`/api/words/${encodeURIComponent(word)}`, { method: 'DELETE' }); loadWords(); }
+        async function addWord() { await fetch('/api/words', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({word: document.getElementById('new-word').value}) }); loadData(); }
+        async function delWord(w) { await fetch(`/api/words/${encodeURIComponent(w)}`, { method: 'DELETE' }); loadData(); }
+        async function addAcr() { await fetch('/api/acronyms', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({key: document.getElementById('acr-key').value, value: document.getElementById('acr-val').value}) }); loadData(); }
+        async function delAcr(k) { await fetch(`/api/acronyms/${encodeURIComponent(k)}`, { method: 'DELETE' }); loadData(); }
+        async function addEmo() { await fetch('/api/emojis', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({icon: document.getElementById('emo-icon').value, text: document.getElementById('emo-text').value}) }); loadData(); }
+        async function delEmo(id) { await fetch(`/api/emojis/${id}`, { method: 'DELETE' }); loadData(); }
 
         function start() { socket.emit('set-username', document.getElementById('user').value); }
-        socket.on('status', m => document.getElementById('stt').innerText = 'Trạng thái: ' + m);
-
         socket.on('audio-data', d => {
             const chat = document.getElementById('chat');
             const div = document.createElement('div'); div.className = 'msg';
             div.innerHTML = `<b style="color:#fe2c55">${d.user}:</b> <span>${d.comment}</span>`;
             chat.prepend(div);
-
             if (d.audio) {
                 if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
                 if (d.type === 'gift' && !document.getElementById('giftToggle').checked) return;
@@ -126,13 +78,12 @@
                 queue.push(d.audio); if (!playing) play();
             }
         });
-
         function play() {
             if (!queue.length) { playing = false; return; }
             playing = true; const a = new Audio(queue.shift());
             a.onended = () => setTimeout(play, 300); a.play().catch(() => play());
         }
-        loadWords(); loadAcronyms(); loadEmojis();
+        loadData();
     </script>
 </body>
 </html>
