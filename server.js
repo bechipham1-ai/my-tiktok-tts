@@ -137,7 +137,7 @@ io.on('connection', (socket) => {
         tiktok.on('gift', async (data) => {
             if (data.gift && data.repeatEnd) {
                 const safeName = await processText(data.nickname);
-                const audio = await getGoogleAudio(`Cảm ơn ${safeName} đã tặng quà nuôi bèo`);
+                const audio = await getGoogleAudio(`Cảm ơn ${safeName} đã góp gạo nuôi bèo`);
                 socket.emit('audio-data', { type: 'gift', user: "QUÀ", comment: `${data.nickname} tặng ${data.giftName}`, audio });
             }
         });
@@ -145,3 +145,4 @@ io.on('connection', (socket) => {
 });
 
 server.listen(process.env.PORT || 3000, () => console.log("Server is running..."));
+
