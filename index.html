@@ -1,60 +1,48 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>TTS IDOL BÈO - ADMIN</title>
+    <title>BÈO AI</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        :root { --main: #fe2c55; --bg: #121212; --panel: #1e1e1e; }
-        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; display: flex; gap: 20px; height: 100vh; box-sizing: border-box; }
-        .column { background: var(--panel); padding: 20px; border-radius: 12px; border: 1px solid #333; display: flex; flex-direction: column; }
-        .left { flex: 1.2; } .right { flex: 2; }
-        input, button { padding: 10px; margin: 5px 0; border-radius: 8px; width: 100%; box-sizing: border-box; }
-        button { background: var(--main); color: white; font-weight: bold; cursor: pointer; border: none; }
-        .list-box { flex-grow: 1; overflow-y: auto; background: #000; padding: 10px; border-radius: 8px; margin-top: 10px; }
-        .setting-row { display: flex; align-items: center; justify-content: space-between; background: #252525; padding: 8px; border-radius: 8px; margin: 5px 0; font-size: 12px; }
-        .switch { position: relative; width: 34px; height: 18px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; border-radius: 18px; }
-        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .4s; }
-        input:checked + .slider { background-color: var(--main); }
-        input:checked + .slider:before { transform: translateX(16px); }
-        .tab-btn { background: #333; width: 32%; display: inline-block; padding: 8px; border-radius: 6px; cursor: pointer; text-align: center; }
-        .tab-active { background: var(--main); }
+        body { background: #121212; color: white; font-family: sans-serif; padding: 20px; }
+        .box { background: #1e1e1e; padding: 20px; border-radius: 10px; border: 1px solid #fe2c55; max-width: 400px; margin: auto; }
+        input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; }
+        button { background: #fe2c55; color: white; font-weight: bold; cursor: pointer; }
+        .ai-btn { background: #4facfe; margin-bottom: 20px; }
+        #stt { font-size: 13px; color: #00f2ea; text-align: center; }
+        #chat { height: 300px; overflow-y: auto; background: #000; padding: 10px; font-size: 13px; }
     </style>
 </head>
 <body>
-    <div class="column left">
-        <h3 style="color:var(--main); margin:0;">🎙️ BÈO ADMIN</h3>
-        <input type="text" id="user" placeholder="ID TikTok">
+    <div class="box">
+        <h3>🎙️ BÈO AI CONTROL</h3>
+        <input type="text" id="user" placeholder="Nhập ID TikTok">
         <button onclick="start()">KẾT NỐI</button>
-        <div class="setting-row" style="background: #4facfe;"><span>✨ CHẾ ĐỘ AI:</span><label class="switch"><input type="checkbox" id="aiToggle" onchange="socket.emit('toggle-ai', this.checked)"><span class="slider"></span></label></div>
-        <p id="stt" style="color:#00f2ea; font-size:12px;">Chưa kết nối</p>
-        <div class="list-box" id="chat"></div>
-    </div>
-    <div class="column right">
-        <div><div class="tab-btn tab-active" id="btn-ban">TỪ CẤM</div></div>
-        <div class="list-box" id="word-list"></div>
+        <button class="ai-btn" id="aiBtn" onclick="toggleAI()">BẬT TRỢ LÝ AI: TẮT</button>
+        <p id="stt">Chưa kết nối</p>
+        <div id="chat"></div>
     </div>
 
     <script>
         const socket = io();
+        let aiActive = false;
         let queue = [], playing = false;
 
+        function toggleAI() {
+            aiActive = !aiActive;
+            document.getElementById('aiBtn').innerText = `BẬT TRỢ LÝ AI: ${aiActive ? 'BẬT' : 'TẮT'}`;
+            socket.emit('toggle-ai', aiActive);
+        }
+
         function start() { socket.emit('set-username', document.getElementById('user').value); }
-        
+
         socket.on('status', m => document.getElementById('stt').innerText = m);
-        
+
         socket.on('audio-data', d => {
-            const chat = document.getElementById('chat');
             const div = document.createElement('div');
-            div.style.padding = "5px";
-            div.style.borderBottom = "1px solid #222";
-            div.style.fontSize = "13px";
-            // Nếu là AI thì đổi màu xanh dương
-            div.innerHTML = `<b style="color:${d.type==='ai'?'#4facfe':'#fe2c55'}">${d.user}:</b> ${d.comment}`;
-            chat.prepend(div);
-            
+            div.innerHTML = `<b style="color:#fe2c55">${d.user}:</b> ${d.comment}`;
+            document.getElementById('chat').prepend(div);
             if (d.audio) {
                 queue.push(d.audio);
                 if (!playing) play();
