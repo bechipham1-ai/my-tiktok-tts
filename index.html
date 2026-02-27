@@ -26,41 +26,57 @@
             background: #fff; border: 2px solid var(--border); color: var(--text);
             padding: 10px; border-radius: 12px; outline: none; flex: 1; font-size: 14px;
         }
-        button {
+        .btn-main {
             background: var(--primary); color: white; border: none; padding: 10px 15px;
             border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;
+            min-width: 60px;
         }
-        button:active { transform: scale(0.95); }
-        .status-tag { font-size: 12px; text-align: center; font-weight: 700; margin-top: 5px; min-height: 15px; transition: 0.3s; }
+        .status-tag { font-size: 12px; text-align: center; font-weight: 700; margin-top: 5px; min-height: 15px; }
         .toggle-group {
             display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
             background: #fff0f3; padding: 10px; border-radius: 18px; border: 1px solid var(--border);
         }
         .toggle-item { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; }
+        
+        /* Switch */
         .switch { position: relative; width: 34px; height: 18px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #e0e0e0; transition: .4s; border-radius: 20px; }
         .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--primary); }
         input:checked + .slider:before { transform: translateX(16px); }
+
+        /* Main Content */
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 12px; gap: 12px; }
         .panel { background: var(--card); border-radius: 20px; border: 2px solid var(--border); display: flex; flex-direction: column; box-shadow: var(--shadow); overflow: hidden; }
-        .tab-header { padding: 10px; background: #fff0f3; display: flex; justify-content: space-around; border-bottom: 1px solid var(--border); }
-        .tab { padding: 5px 12px; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 700; color: #8d6e63; transition: 0.3s; }
+        .tab-header { padding: 8px; background: #fff0f3; display: flex; justify-content: space-around; border-bottom: 1px solid var(--border); }
+        .tab { padding: 6px 10px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 700; color: #8d6e63; }
         .tab.active { background: var(--primary); color: white; }
-        .add-box { padding: 12px; display: flex; gap: 6px; border-bottom: 1px solid var(--border); background: #fffbfd; }
+
+        /* Sửa lại Box Add để hiện nút Thêm trên Mobile */
+        .add-box { 
+            padding: 12px; 
+            display: flex; 
+            flex-wrap: nowrap; /* Không cho xuống dòng */
+            gap: 6px; 
+            border-bottom: 1px solid var(--border); 
+            background: #fffbfd; 
+            align-items: center;
+        }
+        .add-box input { flex: 1; min-width: 0; } /* min-width để input không đẩy nút ra ngoài */
+
         .data-list { height: 150px; overflow-y: auto; padding: 10px; background: #fffbfd; }
-        .chat-list { flex: 1; overflow-y: auto; padding: 12px; min-height: 250px; background: #fffbfd; }
+        .chat-list { flex: 1; overflow-y: auto; padding: 12px; min-height: 200px; background: #fffbfd; }
+        
         .item { display: flex; justify-content: space-between; padding: 8px 12px; background: #fff; border-radius: 10px; margin-bottom: 6px; font-size: 13px; border: 1px solid #fce4ec; }
-        .chat-msg { padding: 10px; border-radius: 12px; margin-bottom: 8px; background: #fff; font-size: 14px; border-left: 4px solid var(--primary); box-shadow: 0 2px 4px rgba(248, 187, 208, 0.1); }
-        .chat-msg b { color: var(--primary); }
-        .del { color: #e57373; font-weight: bold; cursor: pointer; padding: 0 5px; }
+        .chat-msg { padding: 10px; border-radius: 12px; margin-bottom: 8px; background: #fff; font-size: 14px; border-left: 4px solid var(--primary); }
+        .del { color: #e57373; font-weight: bold; cursor: pointer; padding: 0 5px; font-size: 16px; }
 
         @media (min-width: 768px) {
             body { flex-direction: row; }
             .header-panel { width: 300px; height: 100vh; border-right: 2px solid var(--border); border-bottom: none; border-radius: 0 25px 25px 0; }
-            .toggle-group { grid-template-columns: 1fr; gap: 12px; }
-            .main-content { display: grid; grid-template-columns: 1fr 1fr; padding: 20px; gap: 20px; }
+            .toggle-group { grid-template-columns: 1fr; }
+            .main-content { display: grid; grid-template-columns: 1fr 1fr; padding: 20px; }
             .data-list { height: auto; }
         }
     </style>
@@ -70,16 +86,17 @@
         <h2>BÈO CONTROL 🌸</h2>
         <div class="conn-box">
             <input type="text" id="user" placeholder="ID TikTok...">
-            <button onclick="start()">Mở ✨</button>
+            <button class="btn-main" onclick="start()">Mở ✨</button>
         </div>
         <div id="stt" class="status-tag" style="color: var(--accent);">💖 Sẵn sàng</div>
         <div class="toggle-group">
-            <div class="toggle-item"><span>👋 Chào nè</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
-            <div class="toggle-item"><span>🎁 Quà ạ</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
-            <div class="toggle-item"><span>🤖 Bé Bot</span><label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
-            <div class="toggle-item"><span>⚔️ PK nha</span><label class="switch"><input type="checkbox" id="pkToggle" checked><span class="slider"></span></label></div>
+            <div class="toggle-item"><span>👋 Chào</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
+            <div class="toggle-item"><span>🎁 Quà</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
+            <div class="toggle-item"><span>🤖 Bot</span><label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
+            <div class="toggle-item"><span>⚔️ PK</span><label class="switch"><input type="checkbox" id="pkToggle" checked><span class="slider"></span></label></div>
         </div>
     </div>
+
     <div class="main-content">
         <div class="panel">
             <div class="tab-header">
@@ -89,17 +106,18 @@
                 <div class="tab" id="btn-bot" onclick="switchTab('bot')">Bot</div>
             </div>
             <div class="add-box">
-                <input type="text" id="inp-1" placeholder="Từ..." style="flex:2">
-                <input type="text" id="inp-2" placeholder="Nói..." style="flex:1; display:none;">
-                <button onclick="handleAdd()">+</button>
+                <input type="text" id="inp-1" placeholder="Từ...">
+                <input type="text" id="inp-2" placeholder="Nói..." style="display:none;">
+                <button class="btn-main" onclick="handleAdd()">Thêm</button>
             </div>
             <div class="data-list" id="data-display"></div>
         </div>
         <div class="panel">
-            <div style="padding: 12px; font-size: 13px; font-weight: 700; color: var(--primary); border-bottom: 1px solid var(--border); background: #fff0f3;">🌸 NHẬT KÝ LIVE</div>
+            <div style="padding: 10px; font-size: 13px; font-weight: 700; color: var(--primary); border-bottom: 1px solid var(--border); background: #fff0f3;">🌸 NHẬT KÝ LIVE</div>
             <div class="chat-list" id="chat"></div>
         </div>
     </div>
+
     <script>
         const socket = io();
         let curTab = 'ban';
@@ -114,13 +132,32 @@
             curTab = t;
             document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
             document.getElementById(`btn-${t}`).classList.add('active');
-            document.getElementById('inp-2').style.display = (t === 'ban') ? 'none' : 'block';
+            
+            const i1 = document.getElementById('inp-1');
+            const i2 = document.getElementById('inp-2');
+            
+            if(t === 'ban') {
+                i1.placeholder = "Từ cấm...";
+                i2.style.display = 'none';
+            } else if(t === 'acr') {
+                i1.placeholder = "Viết tắt";
+                i2.placeholder = "Đọc là";
+                i2.style.display = 'block';
+            } else if(t === 'emo') {
+                i1.placeholder = "Icon";
+                i2.placeholder = "Đọc là";
+                i2.style.display = 'block';
+            } else {
+                i1.placeholder = "Khách hỏi";
+                i2.placeholder = "Trả lời";
+                i2.style.display = 'block';
+            }
             loadData();
         }
 
         async function loadData() {
             const display = document.getElementById('data-display');
-            display.innerHTML = '<p style="text-align:center; color:#bcaaa4; font-size:12px;">Đang tải...</p>';
+            display.innerHTML = '...';
             const path = curTab==='ban'?'words':curTab==='acr'?'acronyms':curTab==='emo'?'emojis':'bot';
             const res = await (await fetch(`/api/${path}`)).json();
             display.innerHTML = res.map(item => {
@@ -131,7 +168,8 @@
         }
 
         async function handleAdd() {
-            const v1 = document.getElementById('inp-1').value.trim(), v2 = document.getElementById('inp-2').value.trim();
+            const v1 = document.getElementById('inp-1').value.trim();
+            const v2 = document.getElementById('inp-2').value.trim();
             if(!v1) return;
             let path = curTab==='ban'?'words':curTab==='acr'?'acronyms':curTab==='emo'?'emojis':'bot';
             let body = curTab==='ban'?{word:v1}:curTab==='acr'?{key:v1,value:v2}:curTab==='emo'?{icon:v1,text:v2}:{keyword:v1,response:v2};
