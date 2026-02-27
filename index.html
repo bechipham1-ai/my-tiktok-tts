@@ -1,60 +1,109 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>BÈO AI</title>
+    <title>BÈO ADMIN - TRỢ LÝ V1</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { background: #121212; color: white; font-family: sans-serif; padding: 20px; }
-        .box { background: #1e1e1e; padding: 20px; border-radius: 10px; border: 1px solid #fe2c55; max-width: 400px; margin: auto; }
-        input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; }
-        button { background: #fe2c55; color: white; font-weight: bold; cursor: pointer; }
-        .ai-btn { background: #4facfe; margin-bottom: 20px; }
-        #stt { font-size: 13px; color: #00f2ea; text-align: center; }
-        #chat { height: 300px; overflow-y: auto; background: #000; padding: 10px; font-size: 13px; }
+        :root { --main: #fe2c55; --bg: #121212; --panel: #1e1e1e; }
+        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; display: flex; gap: 20px; height: 100vh; box-sizing: border-box; }
+        .column { background: var(--panel); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; border: 1px solid #333; }
+        .left { flex: 1.2; border: 1px solid var(--main); } .right { flex: 2; }
+        input, button { padding: 10px; margin: 5px 0; border-radius: 8px; border: none; width: 100%; box-sizing: border-box; }
+        button { background: var(--main); color: white; font-weight: bold; cursor: pointer; }
+        .list-box { flex-grow: 1; overflow-y: auto; background: #000; padding: 10px; border-radius: 8px; margin-top: 10px; }
+        .setting-row { display: flex; align-items: center; justify-content: space-between; background: #252525; padding: 8px; border-radius: 8px; margin: 5px 0; font-size: 12px; }
+        .tab-btn { background: #333; width: 24%; display: inline-block; padding: 8px; border-radius: 6px; cursor: pointer; text-align: center; font-size: 11px; }
+        .tab-active { background: var(--main); }
+        .switch { position: relative; width: 34px; height: 18px; display: inline-block; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; border-radius: 18px; }
+        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .4s; }
+        input:checked + .slider { background-color: var(--main); }
+        input:checked + .slider:before { transform: translateX(16px); }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h3>🎙️ BÈO AI CONTROL</h3>
-        <input type="text" id="user" placeholder="Nhập ID TikTok">
+    <div class="column left">
+        <h3 style="color:var(--main); margin:0;">🎙️ BÈO ADMIN</h3>
+        <input type="text" id="user" placeholder="ID TikTok">
         <button onclick="start()">KẾT NỐI</button>
-        <button class="ai-btn" id="aiBtn" onclick="toggleAI()">BẬT TRỢ LÝ AI: TẮT</button>
-        <p id="stt">Chưa kết nối</p>
-        <div id="chat"></div>
+        <div class="setting-row"><span>🔊 Chào vào:</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
+        <div class="setting-row"><span>🎁 Quà:</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
+        <div class="setting-row"><span>🤖 Trợ lý:</span><label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
+        <div class="setting-row"><span>🔥 PK 20s:</span><label class="switch"><input type="checkbox" id="pkToggle" checked><span class="slider"></span></label></div>
+        <p id="stt" style="color:#00f2ea; font-size:12px;">Sẵn sàng</p>
+        <div class="list-box" id="chat"></div>
+    </div>
+    <div class="column right">
+        <div style="margin-bottom: 10px;">
+            <div class="tab-btn tab-active" id="btn-ban" onclick="switchTab('ban')">TỪ CẤM</div>
+            <div class="tab-btn" id="btn-acr" onclick="switchTab('acr')">VIẾT TẮT</div>
+            <div class="tab-btn" id="btn-emo" onclick="switchTab('emo')">ICON</div>
+            <div class="tab-btn" id="btn-bot" onclick="switchTab('bot')">TRỢ LÝ</div>
+        </div>
+        <div id="tab-ban-ui"><input type="text" id="new-word" placeholder="Chặn..."><button onclick="addWord()">THÊM</button><div class="list-box" id="word-list"></div></div>
+        <div id="tab-acr-ui" style="display:none;"><input type="text" id="acr-key" placeholder="Viết tắt"><input type="text" id="acr-val" placeholder="Dịch"><button onclick="addAcr()">THÊM</button><div class="list-box" id="acr-list"></div></div>
+        <div id="tab-emo-ui" style="display:none;"><input type="text" id="emo-icon" placeholder="Icon"><input type="text" id="emo-text" placeholder="Đọc"><button onclick="addEmo()">THÊM</button><div class="list-box" id="emo-list"></div></div>
+        <div id="tab-bot-ui" style="display:none;"><input type="text" id="bot-key" placeholder="Từ khóa"><input type="text" id="bot-res" placeholder="Trả lời"><button onclick="addBot()">THÊM</button><div class="list-box" id="bot-list"></div></div>
     </div>
 
     <script>
         const socket = io();
-        let aiActive = false;
         let queue = [], playing = false;
 
-        function toggleAI() {
-            aiActive = !aiActive;
-            document.getElementById('aiBtn').innerText = `BẬT TRỢ LÝ AI: ${aiActive ? 'BẬT' : 'TẮT'}`;
-            socket.emit('toggle-ai', aiActive);
+        function switchTab(t) {
+            ['ban','acr','emo','bot'].forEach(tab => { 
+                document.getElementById(`tab-${tab}-ui`).style.display = tab === t ? 'block' : 'none'; 
+                document.getElementById(`btn-${tab}`).classList.toggle('tab-active', tab === t); 
+            });
         }
 
+        async function loadData() {
+            try {
+                const words = await (await fetch('/api/words')).json();
+                document.getElementById('word-list').innerHTML = words.map(w => `<div style="padding:5px; border-bottom:1px solid #222;">${w}<span onclick="delWord('${w}')" style="color:red; float:right; cursor:pointer;">X</span></div>`).join('');
+                const acrs = await (await fetch('/api/acronyms')).json();
+                document.getElementById('acr-list').innerHTML = acrs.map(a => `<div style="padding:5px; border-bottom:1px solid #222;">${a.key}➜${a.value}<span onclick="delAcr('${a.key}')" style="color:red; float:right; cursor:pointer;">X</span></div>`).join('');
+                const emos = await (await fetch('/api/emojis')).json();
+                document.getElementById('emo-list').innerHTML = emos.map(e => `<div style="padding:5px; border-bottom:1px solid #222;">${e.icon}➜${e.text}<span onclick="delEmo('${e._id}')" style="color:red; float:right; cursor:pointer;">X</span></div>`).join('');
+                const bots = await (await fetch('/api/bot')).json();
+                document.getElementById('bot-list').innerHTML = bots.map(b => `<div style="padding:5px; border-bottom:1px solid #222;">${b.keyword}➜${b.response}<span onclick="delBot('${b._id}')" style="color:red; float:right; cursor:pointer;">X</span></div>`).join('');
+            } catch (e) {}
+        }
+
+        async function addBot() { await fetch('/api/bot', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({keyword: document.getElementById('bot-key').value, response: document.getElementById('bot-res').value}) }); loadData(); }
+        async function delBot(id) { await fetch(`/api/bot/${id}`, { method: 'DELETE' }); loadData(); }
+        async function addWord() { await fetch('/api/words', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({word: document.getElementById('new-word').value}) }); loadData(); }
+        async function delWord(w) { await fetch(`/api/words/${encodeURIComponent(w)}`, { method: 'DELETE' }); loadData(); }
+        async function addAcr() { await fetch('/api/acronyms', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({key: document.getElementById('acr-key').value, value: document.getElementById('acr-val').value}) }); loadData(); }
+        async function delAcr(k) { await fetch(`/api/acronyms/${encodeURIComponent(k)}`, { method: 'DELETE' }); loadData(); }
+        async function addEmo() { await fetch('/api/emojis', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({icon: document.getElementById('emo-icon').value, text: document.getElementById('emo-text').value}) }); loadData(); }
+        async function delEmo(id) { await fetch(`/api/emojis/${id}`, { method: 'DELETE' }); loadData(); }
+
         function start() { socket.emit('set-username', document.getElementById('user').value); }
-
         socket.on('status', m => document.getElementById('stt').innerText = m);
-
         socket.on('audio-data', d => {
-            const div = document.createElement('div');
-            div.innerHTML = `<b style="color:#fe2c55">${d.user}:</b> ${d.comment}`;
-            document.getElementById('chat').prepend(div);
             if (d.audio) {
-                queue.push(d.audio);
-                if (!playing) play();
+                if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
+                if (d.type === 'gift' && !document.getElementById('giftToggle').checked) return;
+                if (d.type === 'pk' && !document.getElementById('pkToggle').checked) return;
+                if (d.type === 'bot' && !document.getElementById('botToggle').checked) return;
+                
+                const div = document.createElement('div');
+                div.style.fontSize = "12px"; div.style.padding = "4px"; div.style.borderBottom = "1px solid #222";
+                div.innerHTML = `<b style="color:#fe2c55">${d.user}:</b> ${d.comment}`;
+                document.getElementById('chat').prepend(div);
+                queue.push(d.audio); if (!playing) play();
             }
         });
 
         function play() {
             if (!queue.length) { playing = false; return; }
             playing = true; const a = new Audio(queue.shift());
-            a.onended = () => setTimeout(play, 300);
-            a.play().catch(() => play());
+            a.onended = () => setTimeout(play, 300); a.play().catch(() => play());
         }
+        loadData();
     </script>
 </body>
 </html>
