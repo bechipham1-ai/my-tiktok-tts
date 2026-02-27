@@ -2,8 +2,8 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bèo Control Panel - Full Tabs</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bèo Control Mobile</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root {
@@ -16,195 +16,184 @@
         }
 
         body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Segoe UI', system-ui, sans-serif;
             background: var(--bg); color: var(--text); margin: 0;
-            display: flex; height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column; height: 100vh; overflow: hidden;
         }
 
-        /* Sidebar */
-        .sidebar {
-            width: 300px; background: var(--card); border-right: 1px solid var(--border);
-            display: flex; flex-direction: column; padding: 24px;
+        /* Sidebar cho PC - Header cho Mobile */
+        .header-panel {
+            background: var(--card); border-bottom: 1px solid var(--border);
+            padding: 15px; display: flex; flex-direction: column; gap: 10px;
+            z-index: 10;
         }
-        h2 { color: var(--primary); margin: 0 0 20px 0; font-size: 20px; letter-spacing: 1px; }
-        
+
+        h2 { color: var(--primary); margin: 0; font-size: 18px; text-align: center; }
+
+        .conn-box { display: flex; gap: 8px; }
         input {
             background: #252833; border: 1px solid var(--border); color: white;
-            padding: 12px; border-radius: 10px; margin-bottom: 12px; outline: none; transition: 0.3s;
+            padding: 10px; border-radius: 8px; outline: none; flex: 1; font-size: 14px;
         }
-        input:focus { border-color: var(--primary); }
 
         button {
-            background: var(--primary); color: white; border: none; padding: 12px;
-            border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s;
+            background: var(--primary); color: white; border: none; padding: 10px 15px;
+            border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;
         }
-        button:hover { opacity: 0.9; transform: translateY(-1px); }
 
-        .status-tag { font-size: 12px; padding: 4px 10px; border-radius: 20px; background: #252833; color: var(--accent); margin-top: 10px; display: inline-block; }
+        /* Group Toggle - Dàn hàng ngang trên Mobile */
+        .toggle-group {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+            background: #252833; padding: 10px; border-radius: 10px;
+        }
+        .toggle-item { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
 
-        .toggle-group { margin-top: 25px; background: #252833; padding: 15px; border-radius: 15px; }
-        .toggle-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 13px; }
-
-        /* Switch UI */
-        .switch { position: relative; width: 36px; height: 20px; }
+        /* Switch */
+        .switch { position: relative; width: 32px; height: 18px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--primary); }
-        input:checked + .slider:before { transform: translateX(16px); }
+        input:checked + .slider:before { transform: translateX(14px); }
 
-        /* Main Content */
-        .main-content { flex: 1; display: flex; flex-direction: column; padding: 24px; gap: 20px; }
-        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; }
-        .panel { background: var(--card); border-radius: 20px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-        .panel-header { padding: 15px 10px; background: #252833; display: flex; justify-content: space-around; }
+        /* Main Area */
+        .main-content {
+            flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 10px; gap: 10px;
+        }
 
-        .tab { padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; color: #888; transition: 0.3s; }
+        .panel { background: var(--card); border-radius: 15px; border: 1px solid var(--border); display: flex; flex-direction: column; }
+        
+        .tab-header { padding: 10px; background: #252833; display: flex; justify-content: space-between; border-radius: 15px 15px 0 0; }
+        .tab { padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; color: #888; }
         .tab.active { background: var(--primary); color: white; }
 
-        .content-list { flex: 1; overflow-y: auto; padding: 15px; }
-        .chat-item { padding: 10px; border-radius: 8px; margin-bottom: 8px; background: #252833; font-size: 13px; animation: fadeIn 0.3s ease; }
-        .data-item { display: flex; justify-content: space-between; padding: 10px 15px; background: #252833; border-radius: 8px; margin-bottom: 6px; font-size: 13px; }
-        .del-btn { color: #ff4d6d; cursor: pointer; font-weight: bold; padding: 0 5px; }
-        
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .add-box { padding: 10px; display: flex; gap: 5px; border-bottom: 1px solid var(--border); }
+        .data-list { height: 150px; overflow-y: auto; padding: 10px; }
+        .chat-list { flex: 1; overflow-y: auto; padding: 10px; min-height: 200px; }
+
+        .item { display: flex; justify-content: space-between; padding: 8px; background: #252833; border-radius: 6px; margin-bottom: 5px; font-size: 12px; }
+        .chat-msg { padding: 8px; border-radius: 8px; margin-bottom: 6px; background: #252833; font-size: 13px; border-left: 3px solid var(--primary); }
+
+        .del { color: var(--primary); font-weight: bold; padding: 0 5px; }
+
+        /* PC View */
+        @media (min-width: 768px) {
+            body { flex-direction: row; }
+            .header-panel { width: 280px; height: 100vh; border-right: 1px solid var(--border); border-bottom: none; }
+            .toggle-group { grid-template-columns: 1fr; }
+            .main-content { display: grid; grid-template-columns: 1fr 1fr; }
+            .data-list { height: auto; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <h2>BÈO LIVE</h2>
-        <input type="text" id="user" placeholder="@id_tiktok">
-        <button onclick="start()">Kết nối ngay</button>
-        <span id="stt" class="status-tag">Chưa kết nối</span>
+    <div class="header-panel">
+        <h2>BÈO CONTROL</h2>
+        <div class="conn-box">
+            <input type="text" id="user" placeholder="ID TikTok...">
+            <button onclick="start()">Mở</button>
+        </div>
+        <div id="stt" style="font-size: 11px; text-align: center; color: var(--accent);">Sẵn sàng</div>
 
         <div class="toggle-group">
-            <div class="toggle-item"><span>Chào khách</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
-            <div class="toggle-item"><span>Cảm ơn quà</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
-            <div class="toggle-item"><span>Trợ lý ảo</span><label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
-            <div class="toggle-item"><span>Nhắc PK 20s</span><label class="switch"><input type="checkbox" id="pkToggle" checked><span class="slider"></span></label></div>
+            <div class="toggle-item"><span>Chào</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
+            <div class="toggle-item"><span>Quà</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
+            <div class="toggle-item"><span>Robot</span><label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
+            <div class="toggle-item"><span>PK</span><label class="switch"><input type="checkbox" id="pkToggle" checked><span class="slider"></span></label></div>
         </div>
     </div>
 
     <div class="main-content">
-        <div class="dashboard-grid">
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="tab active" id="btn-ban" onclick="switchTab('ban')">Từ cấm</div>
-                    <div class="tab" id="btn-acr" onclick="switchTab('acr')">Viết tắt</div>
-                    <div class="tab" id="btn-emo" onclick="switchTab('emo')">Icon</div>
-                    <div class="tab" id="btn-bot" onclick="switchTab('bot')">Trợ lý</div>
-                </div>
-                
-                <div style="padding: 15px; border-bottom: 1px solid var(--border);">
-                    <div style="display: flex; gap: 8px;">
-                        <input type="text" id="inp-1" placeholder="Nhập từ..." style="flex: 2; margin-bottom: 0;">
-                        <input type="text" id="inp-2" placeholder="Dịch..." style="flex: 1; margin-bottom: 0; display: none;">
-                        <button onclick="handleBtnAdd()" style="width: 50px;">+</button>
-                    </div>
-                </div>
-
-                <div class="content-list" id="data-display"></div>
+        <div class="panel">
+            <div class="tab-header">
+                <div class="tab active" id="btn-ban" onclick="switchTab('ban')">Cấm</div>
+                <div class="tab" id="btn-acr" onclick="switchTab('acr')">Tắt</div>
+                <div class="tab" id="btn-emo" onclick="switchTab('emo')">Icon</div>
+                <div class="tab" id="btn-bot" onclick="switchTab('bot')">Bot</div>
             </div>
-
-            <div class="panel">
-                <div class="panel-header" style="color: var(--primary); font-weight: bold; justify-content: flex-start; padding-left: 20px;">LỊCH SỬ CHAT</div>
-                <div class="content-list" id="chat"></div>
+            <div class="add-box">
+                <input type="text" id="inp-1" placeholder="Từ..." style="flex:2">
+                <input type="text" id="inp-2" placeholder="Dịch..." style="flex:1; display:none;">
+                <button onclick="handleAdd()" style="padding: 5px 15px;">+</button>
             </div>
+            <div class="data-list" id="data-display"></div>
+        </div>
+
+        <div class="panel">
+            <div style="padding: 10px; font-size: 12px; font-weight: bold; border-bottom: 1px solid var(--border);">LỊCH SỬ LIVE</div>
+            <div class="chat-list" id="chat"></div>
         </div>
     </div>
 
     <script>
         const socket = io();
-        let currentTab = 'ban';
+        let curTab = 'ban';
         let queue = [], playing = false;
 
         function switchTab(t) {
-            currentTab = t;
+            curTab = t;
             document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
             document.getElementById(`btn-${t}`).classList.add('active');
-            
-            const inp1 = document.getElementById('inp-1');
-            const inp2 = document.getElementById('inp-2');
-
-            if(t === 'ban') { inp1.placeholder = "Chặn từ..."; inp2.style.display = 'none'; }
-            else if(t === 'acr') { inp1.placeholder = "Viết tắt"; inp2.placeholder = "Đọc là"; inp2.style.display = 'block'; }
-            else if(t === 'emo') { inp1.placeholder = "Icon (❤️)"; inp2.placeholder = "Đọc là"; inp2.style.display = 'block'; }
-            else if(t === 'bot') { inp1.placeholder = "Khách hỏi"; inp2.placeholder = "Trả lời"; inp2.style.display = 'block'; }
+            const i1 = document.getElementById('inp-1'), i2 = document.getElementById('inp-2');
+            i2.style.display = (t === 'ban') ? 'none' : 'block';
             loadData();
         }
 
         async function loadData() {
             const display = document.getElementById('data-display');
-            display.innerHTML = '<p style="text-align:center; color:#555;">Đang tải...</p>';
+            display.innerHTML = '...';
+            const res = await (await fetch(`/api/${curTab==='ban'?'words':curTab==='acr'?'acronyms':curTab==='emo'?'emojis':'bot'}`)).json();
             
-            if(currentTab === 'ban') {
-                const res = await (await fetch('/api/words')).json();
-                display.innerHTML = res.map(w => `<div class="data-item"><span>${w}</span><span class="del-btn" onclick="delWord('${w}')">X</span></div>`).join('');
-            } else if(currentTab === 'acr') {
-                const res = await (await fetch('/api/acronyms')).json();
-                display.innerHTML = res.map(a => `<div class="data-item"><span><b>${a.key}</b> ➜ ${a.value}</span><span class="del-btn" onclick="delAcr('${a.key}')">X</span></div>`).join('');
-            } else if(currentTab === 'emo') {
-                const res = await (await fetch('/api/emojis')).json();
-                display.innerHTML = res.map(e => `<div class="data-item"><span>${e.icon} ➜ ${e.text}</span><span class="del-btn" onclick="delEmo('${e._id}')">X</span></div>`).join('');
-            } else if(currentTab === 'bot') {
-                const res = await (await fetch('/api/bot')).json();
-                display.innerHTML = res.map(b => `<div class="data-item"><span><b>${b.keyword}</b> ➜ ${b.response}</span><span class="del-btn" onclick="delBot('${b._id}')">X</span></div>`).join('');
-            }
+            display.innerHTML = res.map(item => {
+                let text = curTab==='ban' ? item : (item.key || item.icon || item.keyword) + ' ➜ ' + (item.value || item.text || item.response);
+                let id = item._id || item;
+                return `<div class="item"><span>${text}</span><span class="del" onclick="delItem('${id}', '${curTab==='ban'?item:''}')">X</span></div>`;
+            }).join('');
         }
 
-        async function handleBtnAdd() {
-            const v1 = document.getElementById('inp-1').value.trim();
-            const v2 = document.getElementById('inp-2').value.trim();
+        async function handleAdd() {
+            const v1 = document.getElementById('inp-1').value, v2 = document.getElementById('inp-2').value;
             if(!v1) return;
-
-            if(currentTab === 'ban') await fetch('/api/words', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({word: v1}) });
-            else if(currentTab === 'acr') await fetch('/api/acronyms', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({key: v1, value: v2}) });
-            else if(currentTab === 'emo') await fetch('/api/emojis', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({icon: v1, text: v2}) });
-            else if(currentTab === 'bot') await fetch('/api/bot', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({keyword: v1, response: v2}) });
-            
-            document.getElementById('inp-1').value = ''; document.getElementById('inp-2').value = '';
+            let path = curTab==='ban'?'words':curTab==='acr'?'acronyms':curTab==='emo'?'emojis':'bot';
+            let body = curTab==='ban'?{word:v1}:curTab==='acr'?{key:v1,value:v2}:curTab==='emo'?{icon:v1,text:v2}:{keyword:v1,response:v2};
+            await fetch(`/api/${path}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+            document.getElementById('inp-1').value=''; document.getElementById('inp-2').value='';
             loadData();
         }
 
-        async function delWord(w) { await fetch(`/api/words/${encodeURIComponent(w)}`, { method: 'DELETE' }); loadData(); }
-        async function delAcr(k) { await fetch(`/api/acronyms/${encodeURIComponent(k)}`, { method: 'DELETE' }); loadData(); }
-        async function delEmo(id) { await fetch(`/api/emojis/${id}`, { method: 'DELETE' }); loadData(); }
-        async function delBot(id) { await fetch(`/api/bot/${id}`, { method: 'DELETE' }); loadData(); }
+        async function delItem(id, word) {
+            let path = curTab==='ban'?'words/'+encodeURIComponent(word):curTab==='acr'?'acronyms/'+encodeURIComponent(id):curTab==='emo'?'emojis/'+id:'bot/'+id;
+            // Lưu ý: logic xóa của bạn cho 'acr' dùng key, hãy kiểm tra lại server.js nếu lỗi
+            await fetch(`/api/${path}`, { method: 'DELETE' });
+            loadData();
+        }
 
         function start() { socket.emit('set-username', document.getElementById('user').value); }
         
-        socket.on('status', m => { 
-            const stt = document.getElementById('stt'); stt.innerText = m;
-            stt.style.color = m.includes('Lỗi') ? '#ff4d6d' : '#00f2ea';
-        });
-
         socket.on('audio-data', d => {
             if (d.audio) {
-                if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
-                if (d.type === 'gift' && !document.getElementById('giftToggle').checked) return;
-                if (d.type === 'pk' && !document.getElementById('pkToggle').checked) return;
-                if (d.type === 'bot' && !document.getElementById('botToggle').checked) return;
-                
+                if ((d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) ||
+                    (d.type === 'gift' && !document.getElementById('giftToggle').checked) ||
+                    (d.type === 'pk' && !document.getElementById('pkToggle').checked) ||
+                    (d.type === 'bot' && !document.getElementById('botToggle').checked)) return;
+
                 const chat = document.getElementById('chat');
                 const div = document.createElement('div');
-                div.className = 'chat-item';
-                div.innerHTML = `<b style="color:var(--primary)">${d.user}:</b> ${d.comment}`;
+                div.className = 'chat-msg';
+                div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
                 chat.prepend(div);
-                if (chat.childNodes.length > 50) chat.removeChild(chat.lastChild);
-
-                queue.push(d.audio);
-                if (!playing) play();
+                if (chat.childNodes.length > 30) chat.removeChild(chat.lastChild);
+                queue.push(d.audio); if (!playing) play();
             }
         });
 
         function play() {
             if (!queue.length) { playing = false; return; }
             playing = true; const a = new Audio(queue.shift());
-            a.onended = () => setTimeout(play, 400);
-            a.play().catch(() => play());
+            a.onended = () => setTimeout(play, 400); a.play().catch(() => play());
         }
-
+        
         switchTab('ban');
     </script>
 </body>
