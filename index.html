@@ -32,6 +32,7 @@
         <div class="setting-row"><span>🔊 Chào người vào:</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
         <div class="setting-row"><span>🎁 Cảm ơn quà:</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
         <div class="setting-row"><span>❤️ Cảm ơn Follow:</span><label class="switch"><input type="checkbox" id="followToggle" checked><span class="slider"></span></label></div>
+        <p id="stt" style="color:#00f2ea; font-size:12px; margin: 5px 0;">Trạng thái: Sẵn sàng</p>
         <div id="chat"></div>
     </div>
     <div class="column right">
@@ -40,32 +41,53 @@
             <div class="tab-btn" id="btn-acr" onclick="switchTab('acr')">VIẾT TẮT</div>
             <div class="tab-btn" id="btn-emo" onclick="switchTab('emo')">ICON</div>
         </div>
-        <div id="tab-ban-ui"><input type="text" id="new-word" placeholder="Chặn..."><button onclick="addWord()">THÊM</button><div class="list-box" id="word-list"></div></div>
-        <div id="tab-acr-ui" style="display:none;"><input type="text" id="acr-key" placeholder="Viết tắt"><input type="text" id="acr-val" placeholder="Dịch"><button onclick="addAcr()">THÊM</button><div class="list-box" id="acr-list"></div></div>
-        <div id="tab-emo-ui" style="display:none;"><input type="text" id="emo-icon" placeholder="Icon"><input type="text" id="emo-text" placeholder="Đọc là"><button onclick="addEmo()">THÊM</button><div class="list-box" id="emo-list"></div></div>
+        <div id="tab-ban-ui"><input type="text" id="new-word" placeholder="Chặn..."><button onclick="addWord()">THÊM TỪ CẤM</button><div class="list-box" id="word-list"></div></div>
+        <div id="tab-acr-ui" style="display:none;"><input type="text" id="acr-key" placeholder="Viết tắt"><input type="text" id="acr-val" placeholder="Dịch"><button onclick="addAcr()">THÊM VIẾT TẮT</button><div class="list-box" id="acr-list"></div></div>
+        <div id="tab-emo-ui" style="display:none;"><input type="text" id="emo-icon" placeholder="Dán Icon (vd: ❤️)"><input type="text" id="emo-text" placeholder="Văn bản (vd: bắn tim)"><button onclick="addEmo()">THÊM ICON</button><div class="list-box" id="emo-list"></div></div>
     </div>
     <script>
         const socket = io();
         let queue = [], playing = false;
+
         function switchTab(t) {
-            ['ban','acr','emo'].forEach(tab => { document.getElementById(`tab-${tab}-ui`).style.display = tab === t ? 'block' : 'none'; document.getElementById(`btn-${tab}`).classList.toggle('tab-active', tab === t); });
+            ['ban','acr','emo'].forEach(tab => { 
+                document.getElementById(`tab-${tab}-ui`).style.display = tab === t ? 'block' : 'none'; 
+                document.getElementById(`btn-${tab}`).classList.toggle('tab-active', tab === t); 
+            });
         }
+
         async function loadData() {
-            const words = await (await fetch('/api/words')).json();
-            document.getElementById('word-list').innerHTML = words.map(w => `<div class="msg"><span>${w}</span> <span onclick="delWord('${w}')" style="color:red; float:right; cursor:pointer;">XÓA</span></div>`).join('');
-            const acrs = await (await fetch('/api/acronyms')).json();
-            document.getElementById('acr-list').innerHTML = acrs.map(a => `<div class="msg"><span>${a.key} ➜ ${a.value}</span> <span onclick="delAcr('${a.key}')" style="color:red; float:right; cursor:pointer;">XÓA</span></div>`).join('');
-            const emos = await (await fetch('/api/emojis')).json();
-            document.getElementById('emo-list').innerHTML = emos.map(e => `<div class="msg"><span>${e.icon} ➜ ${e.text}</span> <span onclick="delEmo('${e._id}')" style="color:red; float:right; cursor:pointer;">XÓA</span></div>`).join('');
+            try {
+                const words = await (await fetch('/api/words')).json();
+                document.getElementById('word-list').innerHTML = words.map(w => `<div class="msg"><span>${w}</span> <span onclick="delWord('${w}')" style="color:red; float:right; cursor:pointer;">XÓA</span></div>`).join('');
+                const acrs = await (await fetch('/api/acronyms')).json();
+                document.getElementById('acr-list').innerHTML = acrs.map(a => `<div class="msg"><span>${a.key} ➜ ${a.value}</span> <span onclick="delAcr('${a.key}')" style="color:red; float:right; cursor:pointer;">XÓA</span></div>`).join('');
+                const emos = await (await fetch('/api/emojis')).json();
+                document.getElementById('emo-list').innerHTML = emos.map(e => `<div class="msg"><span>${e.icon} ➜ ${e.text}</span> <span onclick="delEmo('${e._id}')" style="color:red; float:right; cursor:pointer;">XÓA</span></div>`).join('');
+            } catch (e) { console.log("Lỗi tải dữ liệu"); }
         }
-        async function addWord() { await fetch('/api/words', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({word: document.getElementById('new-word').value}) }); loadData(); }
+
+        async function addWord() { await fetch('/api/words', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({word: document.getElementById('new-word').value}) }); document.getElementById('new-word').value=''; loadData(); }
         async function delWord(w) { await fetch(`/api/words/${encodeURIComponent(w)}`, { method: 'DELETE' }); loadData(); }
-        async function addAcr() { await fetch('/api/acronyms', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({key: document.getElementById('acr-key').value, value: document.getElementById('acr-val').value}) }); loadData(); }
+        async function addAcr() { await fetch('/api/acronyms', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({key: document.getElementById('acr-key').value, value: document.getElementById('acr-val').value}) }); document.getElementById('acr-key').value=''; document.getElementById('acr-val').value=''; loadData(); }
         async function delAcr(k) { await fetch(`/api/acronyms/${encodeURIComponent(k)}`, { method: 'DELETE' }); loadData(); }
-        async function addEmo() { await fetch('/api/emojis', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({icon: document.getElementById('emo-icon').value, text: document.getElementById('emo-text').value}) }); loadData(); }
+        async function addEmo() { await fetch('/api/emojis', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({icon: document.getElementById('emo-icon').value, text: document.getElementById('emo-text').value}) }); document.getElementById('emo-icon').value=''; document.getElementById('emo-text').value=''; loadData(); }
         async function delEmo(id) { await fetch(`/api/emojis/${id}`, { method: 'DELETE' }); loadData(); }
 
-        function start() { socket.emit('set-username', document.getElementById('user').value); }
+        function start() { 
+            const user = document.getElementById('user').value;
+            if(user) {
+                document.getElementById('stt').innerText = 'Trạng thái: Đang kết nối...';
+                socket.emit('set-username', user); 
+            }
+        }
+
+        // Lắng nghe phản hồi từ Server để cập nhật trạng thái
+        socket.on('status', m => {
+            document.getElementById('stt').innerText = 'Trạng thái: ' + m;
+            document.getElementById('stt').style.color = m.includes('Lỗi') ? '#ff4d4d' : '#00f2ea';
+        });
+
         socket.on('audio-data', d => {
             const chat = document.getElementById('chat');
             const div = document.createElement('div'); div.className = 'msg';
@@ -78,10 +100,12 @@
                 queue.push(d.audio); if (!playing) play();
             }
         });
+
         function play() {
             if (!queue.length) { playing = false; return; }
             playing = true; const a = new Audio(queue.shift());
-            a.onended = () => setTimeout(play, 300); a.play().catch(() => play());
+            a.onended = () => setTimeout(play, 300); 
+            a.play().catch(() => play());
         }
         loadData();
     </script>
