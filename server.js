@@ -12,7 +12,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.json());
 
-// KẾT NỐI DATABASE
+// DATABASE
 const MONGODB_URI = "mongodb+srv://baoboi97:baoboi97@cluster0.skkajlz.mongodb.net/tiktok_tts?retryWrites=true&w=majority&appName=Cluster0";
 mongoose.connect(MONGODB_URI).then(() => console.log("✅ MongoDB Connected"));
 
@@ -20,7 +20,7 @@ const BannedWord = mongoose.model('BannedWord', { word: String });
 const Acronym = mongoose.model('Acronym', { key: String, value: String });
 const EmojiMap = mongoose.model('EmojiMap', { icon: String, text: String });
 
-// API QUẢN TRỊ
+// --- API QUẢN TRỊ ---
 app.get('/api/words', async (req, res) => res.json((await BannedWord.find()).map(w => w.word)));
 app.post('/api/words', async (req, res) => {
     const word = req.body.word ? req.body.word.toLowerCase().trim() : "";
@@ -31,7 +31,6 @@ app.delete('/api/words/:word', async (req, res) => {
     await BannedWord.deleteOne({ word: req.params.word });
     res.sendStatus(200);
 });
-
 app.get('/api/acronyms', async (req, res) => res.json(await Acronym.find()));
 app.post('/api/acronyms', async (req, res) => {
     const { key, value } = req.body;
@@ -42,7 +41,6 @@ app.delete('/api/acronyms/:key', async (req, res) => {
     await Acronym.deleteOne({ key: req.params.key });
     res.sendStatus(200);
 });
-
 app.get('/api/emojis', async (req, res) => res.json(await EmojiMap.find()));
 app.post('/api/emojis', async (req, res) => {
     const { icon, text } = req.body;
@@ -54,41 +52,24 @@ app.delete('/api/emojis/:id', async (req, res) => {
     res.sendStatus(200);
 });
 
-// ANTI-SLEEP
-const RENDER_URL = process.env.RENDER_EXTERNAL_HOSTNAME ? `https://${process.env.RENDER_EXTERNAL_HOSTNAME}` : `http://localhost:3000`;
-app.get('/ping', (req, res) => res.send('pong'));
-setInterval(() => axios.get(`${RENDER_URL}/ping`).catch(() => {}), 5 * 60 * 1000);
-
-// HÀM KIỂM TRA TỪ CẤM (Dùng cho cả nội dung và Nickname)
+// XỬ LÝ TTS & TEXT
 async function isBanned(text) {
     if (!text) return false;
-    const lowerText = text.toLowerCase();
     const banned = await BannedWord.find();
-    return banned.some(b => lowerText.includes(b.word));
+    return banned.some(b => text.toLowerCase().includes(b.word));
 }
 
-// HÀM XỬ LÝ VĂN BẢN TỔNG HỢP
 async function processText(text) {
     if (!text || await isBanned(text)) return null;
-
     let processed = text;
-
-    // 1. Chuyển đổi ICON sang Văn bản
     const emojis = await EmojiMap.find();
-    for (const e of emojis) {
-        processed = processed.split(e.icon).join(" " + e.text + " ");
-    }
-
-    // 2. GIỚI HẠN CHỮ SỐ (Chống đọc SĐT)
+    for (const e of emojis) { processed = processed.split(e.icon).join(" " + e.text + " "); }
     processed = processed.replace(/(\d{2})\d+/g, '$1');
-
-    // 3. Thay thế viết tắt
     const acronyms = await Acronym.find();
     acronyms.forEach(a => {
         const regex = new RegExp(`(?<!\\p{L})${a.key}(?!\\p{L})`, 'giu');
         processed = processed.replace(regex, a.value);
     });
-
     return processed;
 }
 
@@ -105,6 +86,7 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 io.on('connection', (socket) => {
     let tiktok;
     let startTime = 0;
+    let pkTimer = null;
 
     socket.on('set-username', (username) => {
         if (tiktok) tiktok.disconnect();
@@ -112,6 +94,23 @@ io.on('connection', (socket) => {
         startTime = Date.now();
         tiktok.connect().then(() => socket.emit('status', `Đã kết nối: ${username}`));
 
+        // --- LOGIC NHẮC 20S CUỐI PK ---
+        tiktok.on('linkMicBattle', () => {
+            if (pkTimer) clearInterval(pkTimer);
+            let timeLeft = 300; // Mặc định 5 phút
+            pkTimer = setInterval(async () => {
+                timeLeft--;
+                if (timeLeft === 20) {
+                    const audio = await getGoogleAudio("thả bông 20 giây cuối bèo ơi");
+                    socket.emit('audio-data', { type: 'pk', user: "HỆ THỐNG", comment: "SẮP HẾT GIỜ PK!", audio });
+                }
+                if (timeLeft <= 0) clearInterval(pkTimer);
+            }, 1000);
+        });
+
+        tiktok.on('linkMicArmBattle', () => { if (pkTimer) clearInterval(pkTimer); });
+
+        // --- ĐỌC CHAT ---
         tiktok.on('chat', async (data) => {
             if (Date.now() > startTime && !(await isBanned(data.nickname))) {
                 const finalContent = await processText(data.comment);
@@ -122,13 +121,12 @@ io.on('connection', (socket) => {
             }
         });
 
+        // --- CÁC SỰ KIỆN KHÁC ---
         tiktok.on('member', async (data) => {
             if (Date.now() > startTime && !(await isBanned(data.nickname))) {
                 const safeName = await processText(data.nickname);
-                if (safeName) {
-                    const audio = await getGoogleAudio(`Bèo ơi, anh ${safeName} ghé chơi nè`);
-                    socket.emit('audio-data', { type: 'welcome', user: "Hệ thống", comment: `${data.nickname} đã tham gia`, audio });
-                }
+                const audio = await getGoogleAudio(`Bèo ơi, anh ${safeName} ghé chơi nè`);
+                socket.emit('audio-data', { type: 'welcome', user: "Hệ thống", comment: `${data.nickname} tham gia`, audio });
             }
         });
 
