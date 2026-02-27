@@ -9,35 +9,26 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { 
-    cors: { origin: "*" },
-    transports: ['websocket', 'polling'] // Sửa lỗi 502 bằng cách cho phép polling
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.json());
 
-// CẤU HÌNH AI GEMINI - Sử dụng Key của Bèo
+// CẤU HÌNH AI GEMINI - DÙNG KEY CỦA BÈO
 const genAI = new GoogleGenerativeAI("AIzaSyDXIWsXNqh5fW543eE3EFieV6vnDMH0zMs");
 
 // DATABASE
 const MONGODB_URI = "mongodb+srv://baoboi97:baoboi97@cluster0.skkajlz.mongodb.net/tiktok_tts?retryWrites=true&w=majority&appName=Cluster0";
-mongoose.connect(MONGODB_URI)
-    .then(() => console.log("✅ Database Connected"))
-    .catch(err => console.error("❌ DB Error:", err));
+mongoose.connect(MONGODB_URI).then(() => console.log("✅ Database OK"));
 
 const BannedWord = mongoose.model('BannedWord', { word: String });
 
-// HÀM GỌI AI (THÊM BẪY LỖI ĐỂ KHÔNG SẬP SERVER)
+// HÀM GỌI AI
 async function askAI(nickname, comment) {
     try {
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const prompt = `Bạn là trợ lý ảo của Idol TikTok tên Bèo. Khán giả ${nickname} nói: "${comment}". Trả lời cực ngắn gọn (dưới 15 từ), vui vẻ.`;
-        const result = await model.generateContent(prompt);
+        const result = await model.generateContent(`Bạn là trợ lý ảo của Bèo. Trả lời ${nickname} cực ngắn gọn về câu: "${comment}".`);
         return result.response.text();
-    } catch (error) {
-        console.log("AI Error:", error.message);
-        return null; // Trả về null để server vẫn chạy bình thường
-    }
+    } catch (e) { return null; }
 }
 
 async function getGoogleAudio(text) {
@@ -59,20 +50,21 @@ io.on('connection', (socket) => {
     socket.on('set-username', (username) => {
         if (tiktok) tiktok.disconnect();
         
-        // Cấu hình kết nối TikTok mạnh mẽ hơn để tránh lỗi Ảnh 3
+        // FIX LỖI TIKTOK CHẶN: Thêm các tùy chọn request chuyên sâu
         tiktok = new WebcastPushConnection(username, {
             processInitialData: false,
             enableExtendedRequestInfo: true,
             requestOptions: {
                 timeout: 10000,
+                headers: { 'User-Agent': 'Mozilla/5.0' }
             }
         });
 
         tiktok.connect()
-            .then(() => socket.emit('status', `Đã kết nối: ${username}`))
+            .then(() => socket.emit('status', `✅ Đã kết nối: ${username}`))
             .catch(err => {
-                console.log("TikTok Connect Error:", err.message);
-                socket.emit('status', `Lỗi kết nối TikTok (Thử lại sau 1 phút)`);
+                // Nếu bị chặn, báo lỗi dễ hiểu
+                socket.emit('status', `❌ TikTok đang bận, hãy thử bấm kết nối lại vài lần`);
             });
 
         tiktok.on('chat', async (data) => {
@@ -80,7 +72,7 @@ io.on('connection', (socket) => {
                 const aiRes = await askAI(data.nickname, data.comment);
                 if (aiRes) {
                     const audio = await getGoogleAudio(aiRes);
-                    socket.emit('audio-data', { type: 'ai', user: "TRỢ LÝ AI", comment: aiRes, audio });
+                    socket.emit('audio-data', { type: 'ai', user: "AI BÈO", comment: aiRes, audio });
                 }
             } else {
                 const audio = await getGoogleAudio(`${data.nickname} nói: ${data.comment}`);
@@ -88,9 +80,6 @@ io.on('connection', (socket) => {
             }
         });
     });
-
-    socket.on('disconnect', () => { if (tiktok) tiktok.disconnect(); });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server chạy trên port ${PORT}`));
+server.listen(process.env.PORT || 3000);
