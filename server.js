@@ -12,7 +12,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.json());
 
-// KẾT NỐI DATABASE
+// DATABASE - Giữ nguyên của Bèo
 const MONGODB_URI = "mongodb+srv://baoboi97:baoboi97@cluster0.skkajlz.mongodb.net/tiktok_tts?retryWrites=true&w=majority&appName=Cluster0";
 mongoose.connect(MONGODB_URI).then(() => console.log("✅ MongoDB Connected"));
 
@@ -21,7 +21,7 @@ const Acronym = mongoose.model('Acronym', { key: String, value: String });
 const EmojiMap = mongoose.model('EmojiMap', { icon: String, text: String });
 const BotAnswer = mongoose.model('BotAnswer', { keyword: String, response: String });
 
-// API QUẢN TRỊ
+// --- API QUẢN TRỊ (Giữ nguyên) ---
 app.get('/api/:path', async (req, res) => {
     const { path } = req.params;
     if (path === 'words') res.json((await BannedWord.find()).map(w => w.word));
@@ -48,7 +48,8 @@ app.delete('/api/:path/:id', async (req, res) => {
     res.sendStatus(200);
 });
 
-// HÀM LẤY AUDIO (Gửi file sạch về, tốc độ sẽ do trình duyệt xử lý)
+// --- LOGIC XỬ LÝ CHÍNH ---
+
 async function getGoogleAudio(text) {
     try {
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.substring(0, 200))}&tl=vi&client=tw-ob`;
@@ -76,14 +77,30 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 io.on('connection', (socket) => {
     let tiktok;
+
     socket.on('set-username', (username) => {
         if (tiktok) tiktok.disconnect();
-        tiktok = new WebcastPushConnection(username, { processInitialData: false });
-        tiktok.connect().then(() => socket.emit('status', `✅ Kết nối: ${username}`)).catch(e => socket.emit('status', `❌ Lỗi: ${e.message}`));
+        
+        // Khởi tạo kết nối với cấu hình đầy đủ
+        tiktok = new WebcastPushConnection(username, {
+            processInitialData: false,
+            enableExtendedGiftInfo: true
+        });
 
+        tiktok.connect().then(state => {
+            console.log(`✅ Đã kết nối tới room của: ${username}`);
+            socket.emit('status', `✅ Kết nối: ${username}`);
+        }).catch(err => {
+            console.error('❌ Lỗi kết nối TikTok:', err);
+            socket.emit('status', `❌ Lỗi: ${err.message}`);
+        });
+
+        // 1. Lắng nghe CHAT
         tiktok.on('chat', async (data) => {
+            console.log(`[CHAT] ${data.nickname}: ${data.comment}`); // Log kiểm tra
             const botRules = await BotAnswer.find();
             const match = botRules.find(r => data.comment.toLowerCase().includes(r.keyword));
+            
             if (match) {
                 const audio = await getGoogleAudio(`Anh ${data.nickname} ơi, ${match.response}`);
                 socket.emit('audio-data', { type: 'bot', user: "TRỢ LÝ", comment: match.response, audio });
@@ -95,7 +112,33 @@ io.on('connection', (socket) => {
                 }
             }
         });
-        // Các sự kiện Member, Gift làm tương tự...
+
+        // 2. Lắng nghe NGƯỜI VÀO PHÒNG
+        tiktok.on('member', async (data) => {
+            console.log(`[JOIN] ${data.nickname} vào phòng`);
+            const safe = await processText(data.nickname);
+            if (safe) {
+                const audio = await getGoogleAudio(`Bèo ơi, anh ${safe} ghé chơi nè`);
+                socket.emit('audio-data', { type: 'welcome', user: "Hệ thống", comment: "Vào phòng", audio });
+            }
+        });
+
+        // 3. Lắng nghe QUÀ
+        tiktok.on('gift', async (data) => {
+            if (data.repeatEnd) { // Chỉ đọc khi kết thúc chuỗi tặng quà
+                console.log(`[GIFT] ${data.nickname} tặng ${data.giftName}`);
+                const safe = await processText(data.nickname);
+                const audio = await getGoogleAudio(`Cảm ơn ${safe} đã tặng ${data.giftName} nuôi bèo`);
+                socket.emit('audio-data', { type: 'gift', user: "QUÀ", comment: `Tặng ${data.giftName}`, audio });
+            }
+        });
+
+        // Ngắt kết nối khi tab web đóng
+        socket.on('disconnect', () => {
+            if (tiktok) tiktok.disconnect();
+        });
     });
 });
-server.listen(process.env.PORT || 3000);
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`🚀 Server đang chạy tại cổng ${PORT}`));
