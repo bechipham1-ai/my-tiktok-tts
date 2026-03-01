@@ -54,7 +54,7 @@ app.post('/api/bot', async (req, res) => {
 });
 app.delete('/api/bot/:id', async (req, res) => { await BotAnswer.findByIdAndDelete(req.params.id); res.sendStatus(200); });
 
-// XỬ LÝ TTS VỚI TỐC ĐỘ LINH HOẠT
+// HÀM LẤY AUDIO VỚI TỐC ĐỘ LINH HOẠT
 async function getGoogleAudio(text, speed = 1.2) {
     try {
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.substring(0, 200))}&tl=vi&client=tw-ob&ttsspeed=${speed}`;
