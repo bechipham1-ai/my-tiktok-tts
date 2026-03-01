@@ -12,7 +12,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.json());
 
-// DATABASE
+// KẾT NỐI DATABASE
 const MONGODB_URI = "mongodb+srv://baoboi97:baoboi97@cluster0.skkajlz.mongodb.net/tiktok_tts?retryWrites=true&w=majority&appName=Cluster0";
 mongoose.connect(MONGODB_URI).then(() => console.log("✅ MongoDB Connected"));
 
@@ -48,6 +48,7 @@ app.delete('/api/:path/:id', async (req, res) => {
     res.sendStatus(200);
 });
 
+// XỬ LÝ TTS & TEXT
 async function getGoogleAudio(text) {
     try {
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.substring(0, 200))}&tl=vi&client=tw-ob`;
@@ -71,7 +72,9 @@ async function processText(text) {
     return processed;
 }
 
+// ROUTES
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 
 io.on('connection', (socket) => {
     let tiktok;
@@ -99,17 +102,18 @@ io.on('connection', (socket) => {
             const safe = await processText(data.nickname);
             if (safe) {
                 const audio = await getGoogleAudio(`Bèo ơi, anh ${safe} ghé chơi nè`);
-                socket.emit('audio-data', { type: 'welcome', user: safe, comment: "vừa vào phòng", audio });
+                socket.emit('audio-data', { type: 'welcome', user: safe, comment: "vào phòng", audio });
             }
         });
 
         tiktok.on('gift', async (data) => {
             if (data.repeatEnd) {
                 const safe = await processText(data.nickname);
-                const audio = await getGoogleAudio(`Cảm ơn ${safe} đã góp ${data.giftName} nuôi bèo`);
+                const audio = await getGoogleAudio(`Cảm ơn ${safe} đã tặng ${data.giftName}`);
                 socket.emit('audio-data', { type: 'gift', user: safe, comment: `đã tặng ${data.giftName}`, audio });
             }
         });
     });
 });
-server.listen(process.env.PORT || 3000);
+
+server.listen(process.env.PORT || 3000, () => console.log("🚀 Server Ready"));
