@@ -3,227 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bèo Control 🌸 Anti-Sleep</title>
+    <title>Bèo Google 🌸 Đọc CMT </title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
-        :root {
-            --primary: #ff85a2; --bg: #fff5f7; --card: #ffffff; --text: #5d4037;
-            --border: #f8bbd0; --accent: #4dd0e1; --shadow: 0 4px 15px rgba(248, 187, 208, 0.4);
-        }
-        body {
-            font-family: 'Quicksand', sans-serif; background: var(--bg); color: var(--text);
-            margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden;
-        }
-        .header-panel {
-            background: var(--card); border-bottom: 2px solid var(--border);
-            padding: 15px; display: flex; flex-direction: column; gap: 10px;
-            z-index: 10; border-radius: 0 0 25px 25px; box-shadow: var(--shadow);
-        }
-        h2 { color: var(--primary); margin: 0; font-size: 20px; text-align: center; font-weight: 700; }
+        :root { --primary: #ff85a2; --bg: #fff5f7; --card: #ffffff; --text: #5d4037; --border: #f8bbd0; --accent: #4dd0e1; }
+        body { font-family: 'Quicksand', sans-serif; background: var(--bg); color: var(--text); margin: 0; }
         
-        /* Hiển thị trạng thái Chống ngủ */
-        .wake-lock-status {
-            font-size: 10px; text-align: center; color: #999; margin-top: -5px;
-        }
-
-        .conn-box { display: flex; gap: 8px; }
-        input {
-            background: #fff; border: 2px solid var(--border); color: var(--text);
-            padding: 10px; border-radius: 12px; outline: none; flex: 1; font-size: 14px;
-        }
-        .btn-main {
-            background: var(--primary); color: white; border: none; padding: 10px 15px;
-            border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;
-            min-width: 60px;
-        }
-        .status-tag { font-size: 12px; text-align: center; font-weight: 700; margin-top: 5px; min-height: 15px; }
-        .toggle-group {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
-            background: #fff0f3; padding: 10px; border-radius: 18px; border: 1px solid var(--border);
-        }
-        .toggle-item { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; }
+        /* Form Auth */
+        #auth-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; gap: 15px; padding: 20px; }
+        .auth-card { background: var(--card); padding: 30px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); width: 100%; max-width: 320px; text-align: center; }
         
-        .switch { position: relative; width: 34px; height: 18px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #e0e0e0; transition: .4s; border-radius: 20px; }
-        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--primary); }
-        input:checked + .slider:before { transform: translateX(16px); }
-
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 12px; gap: 12px; }
-        .panel { background: var(--card); border-radius: 20px; border: 2px solid var(--border); display: flex; flex-direction: column; box-shadow: var(--shadow); overflow: hidden; }
-        .tab-header { padding: 8px; background: #fff0f3; display: flex; justify-content: space-around; border-bottom: 1px solid var(--border); }
-        .tab { padding: 6px 10px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 700; color: #8d6e63; }
+        /* Main UI (Ẩn lúc chưa login) */
+        #main-ui { display: none; flex-direction: column; height: 100vh; overflow: hidden; }
+        .header { background: var(--card); padding: 15px; border-radius: 0 0 25px 25px; box-shadow: 0 4px 15px rgba(248,187,208,0.3); z-index: 10; }
+        
+        input { background: #fff; border: 2px solid var(--border); padding: 12px; border-radius: 15px; outline: none; margin-bottom: 10px; font-size: 14px; width: -webkit-fill-available; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 15px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
+        
+        .tab-header { display: flex; justify-content: space-around; background: #fff0f3; padding: 10px; border-radius: 15px; margin: 10px; }
+        .tab { padding: 8px 15px; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 700; }
         .tab.active { background: var(--primary); color: white; }
+        
+        .main-content { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; }
+        .panel { background: white; border-radius: 20px; border: 2px solid var(--border); overflow: hidden; }
+        .data-list { height: 150px; overflow-y: auto; padding: 10px; }
+        .chat-list { flex: 1; min-height: 200px; padding: 10px; }
+        .item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
+        .chat-msg { padding: 10px; border-radius: 12px; background: white; border-left: 4px solid var(--primary); margin-bottom: 8px; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .del { color: red; font-weight: bold; cursor: pointer; }
 
-        .add-box { padding: 12px; display: flex; gap: 6px; border-bottom: 1px solid var(--border); background: #fffbfd; align-items: center; }
-        .add-box input { flex: 1; min-width: 0; }
-        .data-list { height: 150px; overflow-y: auto; padding: 10px; background: #fffbfd; }
-        .chat-list { flex: 1; overflow-y: auto; padding: 12px; min-height: 200px; background: #fffbfd; }
-        .item { display: flex; justify-content: space-between; padding: 8px 12px; background: #fff; border-radius: 10px; margin-bottom: 6px; font-size: 13px; border: 1px solid #fce4ec; }
-        .chat-msg { padding: 10px; border-radius: 12px; margin-bottom: 8px; background: #fff; font-size: 14px; border-left: 4px solid var(--primary); }
-        .del { color: #e57373; font-weight: bold; cursor: pointer; padding: 0 5px; font-size: 16px; }
-
-        @media (min-width: 768px) {
-            body { flex-direction: row; }
-            .header-panel { width: 300px; height: 100vh; border-right: 2px solid var(--border); border-bottom: none; border-radius: 0 25px 25px 0; }
-            .toggle-group { grid-template-columns: 1fr; }
-            .main-content { display: grid; grid-template-columns: 1fr 1fr; padding: 20px; }
-            .data-list { height: auto; }
-        }
+        @media (min-width: 768px) { #main-ui { flex-direction: row; } .header { width: 320px; height: 100vh; border-radius: 0 25px 25px 0; } .main-content { display: grid; grid-template-columns: 1fr 1fr; } }
     </style>
 </head>
 <body>
-    <div class="header-panel">
-        <h2>BÈO CONTROL 🌸</h2>
-        <div id="wakeStatus" class="wake-lock-status">Màn hình: Tự động tắt</div>
-        <div class="conn-box">
-            <input type="text" id="user" placeholder="ID TikTok...">
-            <button class="btn-main" onclick="start()">Mở ✨</button>
-        </div>
-        <div id="stt" class="status-tag" style="color: var(--accent);">💖 Sẵn sàng</div>
-        <div class="toggle-group">
-            <div class="toggle-item"><span>👋 Chào</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
-            <div class="toggle-item"><span>🎁 Quà</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
-            <div class="toggle-item"><span>🤖 Bot</span><label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
-            <div class="toggle-item"><span>⚔️ PK</span><label class="switch"><input type="checkbox" id="pkToggle" checked><span class="slider"></span></label></div>
+
+    <div id="auth-screen">
+        <div class="auth-card">
+            <h2 style="color:var(--primary)">BÈO CONTROL 🌸</h2>
+            <input type="text" id="auth-user" placeholder="Tên đăng nhập">
+            <input type="password" id="auth-pass" placeholder="Mật khẩu">
+            <button onclick="handleAuth('login')">Đăng nhập</button>
+            <p style="font-size: 12px; color: #888; margin-top: 15px;" onclick="handleAuth('register')">Chưa có nick? Đăng ký ngay ✨</p>
         </div>
     </div>
 
-    <div class="main-content">
-        <div class="panel">
-            <div class="tab-header">
-                <div class="tab active" id="btn-ban" onclick="switchTab('ban')">Cấm</div>
-                <div class="tab" id="btn-acr" onclick="switchTab('acr')">Tắt</div>
-                <div class="tab" id="btn-emo" onclick="switchTab('emo')">Icon</div>
-                <div class="tab" id="btn-bot" onclick="switchTab('bot')">Bot</div>
-            </div>
-            <div class="add-box">
-                <input type="text" id="inp-1" placeholder="Từ...">
-                <input type="text" id="inp-2" placeholder="Nói..." style="display:none;">
-                <button class="btn-main" onclick="handleAdd()">Thêm</button>
-            </div>
-            <div class="data-list" id="data-display"></div>
+    <div id="main-ui">
+        <div class="header">
+            <h3 id="welcome-text" style="text-align:center; color: var(--primary);">Chào Bèo!</h3>
+            <input type="text" id="tiktok-id" placeholder="ID TikTok đang Live...">
+            <button onclick="startLive()">Kết nối Live ✨</button>
+            <div id="stt" style="text-align:center; font-size:12px; margin-top:10px; color: var(--accent);">Sẵn sàng kết nối</div>
+            <button onclick="location.reload()" style="background:#888; margin-top:20px;">Đăng xuất</button>
         </div>
-        <div class="panel">
-            <div style="padding: 10px; font-size: 13px; font-weight: 700; color: var(--primary); border-bottom: 1px solid var(--border); background: #fff0f3;">🌸 NHẬT KÝ LIVE</div>
-            <div class="chat-list" id="chat"></div>
+
+        <div class="main-content">
+            <div class="panel">
+                <div class="tab-header">
+                    <div class="tab active" onclick="switchTab('words', this)">Cấm</div>
+                    <div class="tab" onclick="switchTab('acr', this)">Tắt</div>
+                    <div class="tab" onclick="switchTab('emo', this)">Icon</div>
+                    <div class="tab" onclick="switchTab('bot', this)">Bot</div>
+                </div>
+                <div style="padding:10px; display:flex; gap:5px;">
+                    <input type="text" id="v1" placeholder="Từ..." style="margin:0">
+                    <input type="text" id="v2" placeholder="Nói..." style="margin:0; display:none;">
+                    <button onclick="addItem()" style="width:60px; margin:0">+</button>
+                </div>
+                <div class="data-list" id="data-display"></div>
+            </div>
+            <div class="panel">
+                <div style="padding:10px; font-weight:700; background:#fff0f3; color:var(--primary)">NHẬT KÝ LIVE</div>
+                <div class="chat-list" id="chat"></div>
+            </div>
         </div>
     </div>
 
     <script>
         const socket = io();
-        let curTab = 'ban';
+        let currentUser = "";
+        let currentTab = "words";
         let queue = [], playing = false;
-        let wakeLock = null;
 
-        // --- HÀM GIỮ MÀN HÌNH SÁNG ---
-        async function requestWakeLock() {
-            try {
-                if ('wakeLock' in navigator) {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                    document.getElementById('wakeStatus').innerText = "Màn hình: Đang giữ sáng 💡";
-                    document.getElementById('wakeStatus').style.color = "#4dd0e1";
-                    
-                    wakeLock.addEventListener('release', () => {
-                        console.log('Wake Lock was released');
-                    });
-                }
-            } catch (err) {
-                console.error(`${err.name}, ${err.message}`);
-            }
+        async function handleAuth(type) {
+            const username = document.getElementById('auth-user').value;
+            const password = document.getElementById('auth-pass').value;
+            if(!username || !password) return alert("Điền đủ giúp Bèo nha!");
+            
+            const res = await fetch(`/api/${type}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            if(data.success) {
+                currentUser = username.toLowerCase();
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('main-ui').style.display = 'flex';
+                document.getElementById('welcome-text').innerText = "Chào " + currentUser + "! 🌸";
+                loadData();
+                if ('wakeLock' in navigator) navigator.wakeLock.request('screen');
+            } else alert(data.error);
         }
 
-        // Tự động giữ sáng khi người dùng tương tác hoặc khi tab được quay lại
-        document.addEventListener('visibilitychange', async () => {
-            if (wakeLock !== null && document.visibilityState === 'visible') {
-                await requestWakeLock();
-            }
-        });
-
-        function updateStatus(text, color) {
-            const stt = document.getElementById('stt');
-            stt.innerText = text; stt.style.color = color;
-        }
-
-        function switchTab(t) {
-            curTab = t;
-            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-            document.getElementById(`btn-${t}`).classList.add('active');
-            const i1 = document.getElementById('inp-1'), i2 = document.getElementById('inp-2');
-            i2.style.display = (t === 'ban') ? 'none' : 'block';
+        function switchTab(type, el) {
+            currentTab = type;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('v2').style.display = (type === 'words') ? 'none' : 'block';
             loadData();
         }
 
         async function loadData() {
+            const res = await fetch(`/api/data/${currentTab}?owner=${currentUser}`);
+            const data = await res.json();
             const display = document.getElementById('data-display');
-            display.innerHTML = '...';
-            const path = curTab==='ban'?'words':curTab==='acr'?'acronyms':curTab==='emo'?'emojis':'bot';
-            const res = await (await fetch(`/api/${path}`)).json();
-            display.innerHTML = res.map(item => {
-                let text = curTab==='ban' ? item : (item.key || item.icon || item.keyword) + ' ➜ ' + (item.value || item.text || item.response);
-                let id = item._id || item;
-                return `<div class="item"><span>${text}</span><span class="del" onclick="delItem('${id}', '${curTab==='ban'?item:''}')">×</span></div>`;
+            display.innerHTML = data.map(item => {
+                let text = currentTab === 'words' ? item : (item.key || item.icon || item.keyword) + " ➜ " + (item.value || item.text || item.response);
+                let id = item._id || "";
+                return `<div class="item"><span>${text}</span><span class="del" onclick="deleteItem('${id}', '${item}')">×</span></div>`;
             }).join('');
         }
 
-        async function handleAdd() {
-            const v1 = document.getElementById('inp-1').value.trim(), v2 = document.getElementById('inp-2').value.trim();
-            if(!v1) return;
-            let path = curTab==='ban'?'words':curTab==='acr'?'acronyms':curTab==='emo'?'emojis':'bot';
-            let body = curTab==='ban'?{word:v1}:curTab==='acr'?{key:v1,value:v2}:curTab==='emo'?{icon:v1,text:v2}:{keyword:v1,response:v2};
-            await fetch(`/api/${path}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-            document.getElementById('inp-1').value=''; document.getElementById('inp-2').value='';
+        async function addItem() {
+            const v1 = document.getElementById('v1').value;
+            const v2 = document.getElementById('v2').value;
+            await fetch(`/api/data/${currentTab}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ owner: currentUser, v1, v2 })
+            });
+            document.getElementById('v1').value = ""; document.getElementById('v2').value = "";
             loadData();
         }
 
-        async function delItem(id, word) {
-            let path = curTab==='ban'?'words/'+encodeURIComponent(word):curTab==='acr'?'acronyms/'+id:curTab==='emo'?'emojis/'+id:'bot/'+id;
-            await fetch(`/api/${path}`, { method: 'DELETE' });
+        async function deleteItem(id, word) {
+            await fetch(`/api/data/${currentTab}?owner=${currentUser}&id=${id}&word=${word}`, { method: 'DELETE' });
             loadData();
         }
 
-        function start() { 
-            const user = document.getElementById('user').value;
-            if(!user) return updateStatus("Chưa nhập ID kìa! 😿", "#ff85a2");
-            
-            // Kích hoạt giữ sáng khi bấm nút Mở
-            requestWakeLock();
-            
-            updateStatus("Đang kết nối... ✨", "#4dd0e1");
-            socket.emit('set-username', user); 
+        function startLive() {
+            const tiktokID = document.getElementById('tiktok-id').value;
+            socket.emit('start-live', { tiktokID, owner: currentUser });
         }
 
-        socket.on('status', m => {
-            if(m.includes("✅") || m.includes("Đã kết nối")) updateStatus("Đã kết nối rồi nha! 💖", "#4dd0e1");
-            else if(m.includes("❌") || m.includes("Lỗi")) updateStatus("Lỗi rồi, thử lại nhé 😿", "#ff85a2");
-            else updateStatus(m, "#4dd0e1");
-        });
-
+        socket.on('status', m => document.getElementById('stt').innerText = m);
         socket.on('audio-data', d => {
-            if (d.audio) {
-                if ((d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) ||
-                    (d.type === 'gift' && !document.getElementById('giftToggle').checked) ||
-                    (d.type === 'pk' && !document.getElementById('pkToggle').checked) ||
-                    (d.type === 'bot' && !document.getElementById('botToggle').checked)) return;
-
-                const chat = document.getElementById('chat');
-                const div = document.createElement('div');
-                div.className = 'chat-msg';
-                div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
-                chat.prepend(div);
-                if (chat.childNodes.length > 30) chat.removeChild(chat.lastChild);
-                queue.push(d.audio); if (!playing) play();
-            }
+            const div = document.createElement('div');
+            div.className = 'chat-msg';
+            div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
+            const chat = document.getElementById('chat');
+            chat.prepend(div);
+            if(chat.childNodes.length > 30) chat.removeChild(chat.lastChild);
+            queue.push(d.audio); if(!playing) play();
         });
 
         function play() {
-            if (!queue.length) { playing = false; return; }
+            if(!queue.length) { playing = false; return; }
             playing = true; const a = new Audio(queue.shift());
             a.onended = () => setTimeout(play, 400); a.play().catch(() => play());
         }
-        switchTab('ban');
     </script>
 </body>
 </html>
