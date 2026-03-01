@@ -3,96 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bèo Control 🌸 Super Speed Fix</title>
+    <title>Bèo Control 🌸 Home</title>
     <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/vinhgl/amlich-js@master/amlich-hnd.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
-        :root { --primary: #ff85a2; --bg: #fff5f7; --card: #ffffff; --text: #5d4037; --border: #f8bbd0; --accent: #4dd0e1; }
+        :root { --primary: #ff85a2; --bg: #fff5f7; --card: #ffffff; --text: #5d4037; --border: #f8bbd0; --accent: #4dd0e1; --danger: #ff5252; }
         * { box-sizing: border-box; }
         body { font-family: 'Quicksand', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        .header-panel { background: var(--card); border-bottom: 2px solid var(--border); padding: 15px; display: flex; flex-direction: column; gap: 8px; z-index: 10; border-radius: 0 0 25px 25px; box-shadow: 0 4px 15px rgba(248, 187, 208, 0.4); }
-        h2 { color: var(--primary); margin: 0; font-size: 20px; text-align: center; font-weight: 700; }
-        .conn-box { display: flex; gap: 8px; }
-        input { background: #fff; border: 2px solid var(--border); padding: 10px; border-radius: 12px; outline: none; flex: 1; font-size: 14px; min-width: 0; }
+        
+        .clock-section { background: linear-gradient(135deg, #ff85a2, #ffb3c6); color: white; padding: 15px; text-align: center; border-radius: 0 0 25px 25px; }
+        #clock-time { font-size: 30px; font-weight: 700; }
+        #clock-date { font-size: 12px; opacity: 0.9; margin-top: 4px; }
+
+        .header-panel { background: var(--card); padding: 15px; border-radius: 20px; margin: 10px; border: 2px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+        .conn-box { display: flex; gap: 8px; margin-bottom: 10px; }
+        input { background: #fff; border: 2px solid var(--border); padding: 10px; border-radius: 12px; outline: none; flex: 1; font-size: 14px; }
         .btn-main { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 12px; font-weight: bold; cursor: pointer; }
         
-        .speed-box { background: #fff0f3; padding: 12px; border-radius: 18px; border: 1px solid var(--border); margin: 5px 0; width: 100%; }
-        .speed-info { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 5px; }
-        #speed-val { background: var(--primary); color: white; padding: 2px 8px; border-radius: 8px; font-size: 10px; }
+        .speed-box { background: #fffbfd; padding: 10px; border-radius: 15px; border: 1px solid var(--border); margin-bottom: 10px; }
+        .speed-info { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; background: #ffd1dc; border-radius: 10px; }
-        input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: var(--primary); -webkit-appearance: none; margin-top: -5px; }
+        input[type=range]::-webkit-slider-thumb { height: 18px; width: 18px; border-radius: 50%; background: var(--primary); -webkit-appearance: none; margin-top: -6px; border: 2px solid white; }
 
-        .toggle-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; background: #fffbfd; padding: 10px; border-radius: 18px; border: 1px solid var(--border); }
-        .toggle-item { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 600; }
-        .switch { position: relative; width: 34px; height: 18px; }
+        .controls-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .t-item { background: #fff; padding: 8px 2px; border-radius: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; }
+        .t-item.master { border-color: var(--danger); }
+        .switch { width: 30px; height: 16px; position: relative; display: inline-block; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #e0e0e0; transition: .4s; border-radius: 20px; }
-        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background: white; transition: .4s; border-radius: 50%; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ddd; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 10px; width: 10px; left: 3px; bottom: 3px; background: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background: var(--primary); }
-        input:checked + .slider:before { transform: translateX(16px); }
+        #masterToggle:checked + .slider { background: var(--danger); }
+        input:checked + .slider:before { transform: translateX(14px); }
 
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 12px; gap: 12px; }
-        .panel { background: var(--card); border-radius: 20px; border: 2px solid var(--border); overflow: hidden; display: flex; flex-direction: column; }
-        .tab-header { padding: 8px; background: #fff0f3; display: flex; justify-content: space-around; }
-        .tab { padding: 6px 10px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 700; color: #8d6e63; }
-        .tab.active { background: var(--primary); color: white; }
-        .add-box { padding: 10px; display: flex; gap: 5px; border-bottom: 1px solid var(--border); }
-        .data-list { height: 150px; overflow-y: auto; padding: 8px; }
-        .chat-list { flex: 1; overflow-y: auto; padding: 10px; min-height: 200px; }
+        .chat-container { flex: 1; padding: 10px; overflow-y: auto; }
         .chat-msg { padding: 8px 12px; border-radius: 12px; background: white; border-left: 4px solid var(--primary); margin-bottom: 6px; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .item { display: flex; justify-content: space-between; padding: 6px 10px; background: #fff; border-radius: 8px; margin-bottom: 5px; font-size: 12px; border: 1px solid #eee; }
-        .del { color: #ff5252; font-weight: bold; cursor: pointer; }
-
-        @media (min-width: 768px) { body { flex-direction: row; } .header-panel { width: 300px; height: 100vh; border-radius: 0 25px 25px 0; border-right: 2px solid var(--border); } .main-content { display: grid; grid-template-columns: 1fr 1fr; } }
+        
+        .nav-links { text-align: center; padding: 10px; }
+        .nav-links a { font-size: 12px; color: var(--primary); text-decoration: none; font-weight: bold; border: 1px dashed var(--primary); padding: 5px 15px; border-radius: 10px; }
     </style>
 </head>
 <body>
+    <div class="clock-section">
+        <div id="clock-time">00:00:00</div>
+        <div id="clock-date">DL: --/--/---- - ÂL: --/--</div>
+    </div>
+
     <div class="header-panel">
-        <h2>BÈO CONTROL 🌸</h2>
         <div class="conn-box">
             <input type="text" id="user" placeholder="ID TikTok...">
-            <button class="btn-main" onclick="start()">Mở ✨</button>
+            <button class="btn-main" onclick="start()">MỞ ✨</button>
         </div>
-        <div id="stt" style="font-size: 11px; text-align: center; font-weight: 700; color: var(--accent);">💖 Sẵn sàng</div>
-        
         <div class="speed-box">
-            <div class="speed-info"><span>TỐC ĐỘ ĐỌC</span><span id="speed-val">1.2x</span></div>
+            <div class="speed-info"><span>TỐC ĐỘ</span><span id="speed-val">1.2x</span></div>
             <input type="range" id="speed-range" min="0.5" max="2.0" step="0.1" value="1.2" oninput="changeSpeed(this.value)">
         </div>
-
-        <div class="toggle-group">
-            <div class="toggle-item"><span>👋 Chào</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
-            <div class="toggle-item"><span>🎁 Quà</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
-            <div class="toggle-item"><span>🤖 Bot</span><label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
-            <div class="toggle-item"><span>⚔️ PK</span><label class="switch"><input type="checkbox" id="pkToggle" checked><span class="slider"></span></label></div>
+        <div class="controls-grid">
+            <div class="t-item master"><span>TẮT HẾT</span><label class="switch"><input type="checkbox" id="masterToggle" checked><span class="slider"></span></label></div>
+            <div class="t-item"><span>CHÀO</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
+            <div class="t-item"><span>QUÀ</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
+            <div class="t-item"><span>BOT</span><label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
         </div>
     </div>
 
-    <div class="main-content">
-        <div class="panel">
-            <div class="tab-header">
-                <div class="tab active" id="btn-ban" onclick="switchTab('ban')">Cấm</div>
-                <div class="tab" id="btn-acr" onclick="switchTab('acr')">Tắt</div>
-                <div class="tab" id="btn-emo" onclick="switchTab('emo')">Icon</div>
-                <div class="tab" id="btn-bot" onclick="switchTab('bot')">Bot</div>
-            </div>
-            <div class="add-box">
-                <input type="text" id="inp-1" placeholder="Từ...">
-                <input type="text" id="inp-2" placeholder="Nói..." style="display:none;">
-                <button class="btn-main" onclick="handleAdd()">Thêm</button>
-            </div>
-            <div class="data-list" id="data-display"></div>
-        </div>
-        <div class="panel">
-            <div style="padding: 10px; font-size: 12px; font-weight: 700; background: #fff0f3; color: var(--primary);">🌸 NHẬT KÝ LIVE</div>
-            <div class="chat-list" id="chat"></div>
-        </div>
-    </div>
+    <div class="chat-container" id="chat"></div>
+    <div class="nav-links"><a href="/admin">⚙️ CÀI ĐẶT TỪ CẤM & ICON</a></div>
 
     <script>
         const socket = io();
-        let curTab = 'ban', queue = [], playing = false, currentSpeed = 1.2;
+        let queue = [], playing = false, currentSpeed = 1.2;
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock-time').innerText = now.toLocaleTimeString('vi-VN');
+            const lunar = getLunarDate(now.getDate(), now.getMonth()+1, now.getFullYear());
+            document.getElementById('clock-date').innerText = `DL: ${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()} - ÂL: ${lunar.day}/${lunar.month}`;
+        }
+        setInterval(updateClock, 1000); updateClock();
 
         function changeSpeed(v) {
             document.getElementById('speed-val').innerText = v + "x";
@@ -107,69 +96,27 @@
             }
         }
 
-        function switchTab(t) {
-            curTab = t;
-            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-            document.getElementById(`btn-${t}`).classList.add('active');
-            document.getElementById('inp-2').style.display = (t === 'ban') ? 'none' : 'block';
-            loadData();
-        }
-
-        async function loadData() {
-            const p = curTab==='ban'?'words':curTab==='acr'?'acronyms':curTab==='emo'?'emojis':'bot';
-            const res = await (await fetch(`/api/${p}`)).json();
-            document.getElementById('data-display').innerHTML = res.map(item => {
-                let text = curTab==='ban' ? item : (item.key || item.icon || item.keyword) + ' ➜ ' + (item.value || item.text || item.response);
-                let id = item._id || item;
-                return `<div class="item"><span>${text}</span><span class="del" onclick="delItem('${p}', '${id}')">×</span></div>`;
-            }).join('');
-        }
-
-        async function handleAdd() {
-            const p = curTab==='ban'?'words':curTab==='acr'?'acronyms':curTab==='emo'?'emojis':'bot';
-            const v1 = document.getElementById('inp-1').value.trim(), v2 = document.getElementById('inp-2').value.trim();
-            if(!v1) return;
-            const body = curTab==='ban'?{word:v1}:curTab==='acr'?{key:v1,value:v2}:curTab==='emo'?{icon:v1,text:v2}:{keyword:v1,response:v2};
-            await fetch(`/api/${p}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-            document.getElementById('inp-1').value=''; document.getElementById('inp-2').value='';
-            loadData();
-        }
-
-        async function delItem(p, id) {
-            await fetch(`/api/${p}/${encodeURIComponent(id)}`, { method: 'DELETE' });
-            loadData();
-        }
-
-        socket.on('status', m => { document.getElementById('stt').innerText = m; });
         socket.on('audio-data', d => {
-            if ((d.type==='welcome'&&!document.getElementById('welcomeToggle').checked)||(d.type==='gift'&&!document.getElementById('giftToggle').checked)||(d.type==='bot'&&!document.getElementById('botToggle').checked)) return;
+            if (!document.getElementById('masterToggle').checked) return;
+            if ((d.type==='welcome'&&!document.getElementById('welcomeToggle').checked)||
+                (d.type==='gift'&&!document.getElementById('giftToggle').checked)||
+                (d.type==='bot'&&!document.getElementById('botToggle').checked)) return;
+
             const chat = document.getElementById('chat');
             const div = document.createElement('div');
-            div.className = 'chat-msg'; 
-            
-            // Fix hiển thị tên cho từng loại sự kiện
-            if (d.type === 'welcome') {
-                div.innerHTML = `<span style="color: #ff85a2;">🌸</span> <b>${d.user}:</b> vừa vào phòng`;
-            } else if (d.type === 'gift') {
-                div.innerHTML = `<span style="color: #ffb300;">🎁</span> <b>${d.user}:</b> ${d.comment}`;
-            } else {
-                div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
-            }
-
+            div.className = 'chat-msg';
+            div.innerHTML = d.type==='welcome' ? `🌸 <b>${d.user}:</b> vào phòng` : d.type==='gift' ? `🎁 <b>${d.user}:</b> ${d.comment}` : `<b>${d.user}:</b> ${d.comment}`;
             chat.prepend(div);
             if(chat.childNodes.length > 30) chat.removeChild(chat.lastChild);
             queue.push(d.audio); if(!playing) play();
         });
 
         function play() {
-            if(!queue.length){ playing=false; return; }
-            playing=true; 
-            const a = new Audio(queue.shift());
-            a.playbackRate = currentSpeed; 
-            a.onended = () => setTimeout(play, 150); 
+            if(!queue.length || !document.getElementById('masterToggle').checked){ playing=false; return; }
+            playing=true; const a = new Audio(queue.shift());
+            a.playbackRate = currentSpeed; a.onended = () => setTimeout(play, 150);
             a.play().catch(() => play());
         }
-        loadData();
     </script>
 </body>
 </html>
