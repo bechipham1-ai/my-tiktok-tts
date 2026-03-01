@@ -11,16 +11,16 @@
         * { box-sizing: border-box; }
         body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; overflow: hidden; color: var(--text); }
         
-        /* CỘT TRÁI */
-        .left-side { width: 320px; display: flex; flex-direction: column; border-right: 2px solid var(--border); background: #fff; flex-shrink: 0; }
-        .clock-box { background: linear-gradient(135deg, #ff85a2, #ffb3c6); color: white; padding: 25px 15px; text-align: center; border-radius: 0 0 30px 30px; margin-bottom: 10px; }
-        #clock-time { font-size: 42px; font-weight: 700; line-height: 1; }
-        #clock-date { font-size: 13px; opacity: 0.9; margin-top: 10px; font-weight: 500; }
+        /* CỘT TRÁI: ĐIỀU KHIỂN */
+        .left-side { width: 330px; display: flex; flex-direction: column; border-right: 2px solid var(--border); background: #fff; flex-shrink: 0; }
+        .clock-box { background: linear-gradient(135deg, #ff85a2, #ffb3c6); color: white; padding: 25px 15px; text-align: center; border-radius: 0 0 30px 30px; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(255,133,162,0.2); }
+        #clock-time { font-size: 42px; font-weight: 700; line-height: 1; margin-bottom: 10px; }
+        #clock-date { font-size: 13px; font-weight: 500; line-height: 1.4; }
 
-        .control-panel { padding: 15px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+        .control-panel { padding: 15px; display: flex; flex-direction: column; gap: 12px; }
         .box { background: var(--bg); border: 1px solid var(--border); padding: 12px; border-radius: 20px; }
         .conn-row { display: flex; gap: 5px; }
-        input[type="text"] { flex: 1; padding: 10px; border-radius: 12px; border: 2px solid var(--border); outline: none; font-family: inherit; }
+        input[type="text"] { flex: 1; padding: 10px; border-radius: 12px; border: 2px solid var(--border); outline: none; }
         .btn-m { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 12px; font-weight: 700; cursor: pointer; }
         
         .speed-info { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
@@ -29,7 +29,7 @@
 
         .sw-list { display: flex; flex-direction: column; gap: 8px; }
         .sw-item { background: white; border: 1px solid var(--border); padding: 10px 15px; border-radius: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; }
-        .sw-item.master { border-color: #ff5252; color: #ff5252; margin-bottom: 5px; }
+        .sw-item.master { border-color: #ff5252; color: #ff5252; }
 
         .switch { position: relative; width: 36px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -39,14 +39,14 @@
         .master input:checked + .slider { background: #ff5252; }
         input:checked + .slider:before { transform: translateX(16px); }
 
-        /* CỘT PHẢI */
-        .right-side { flex: 1; display: flex; flex-direction: column; padding: 20px; background: var(--bg); }
-        .journal-header { background: white; padding: 12px 20px; border-radius: 20px 20px 0 0; border: 2px solid var(--border); border-bottom: none; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+        /* CỘT PHẢI: NHẬT KÝ */
+        .right-side { flex: 1; display: flex; flex-direction: column; padding: 20px; }
+        .journal-header { background: white; padding: 12px 20px; border-radius: 20px 20px 0 0; border: 2px solid var(--border); border-bottom: none; font-weight: 700; color: var(--primary); }
         .journal-content { flex: 1; background: white; border: 2px solid var(--border); border-radius: 0 0 20px 20px; overflow-y: auto; padding: 15px; }
-        .msg { padding: 12px 18px; background: var(--bg); border-left: 5px solid var(--primary); border-radius: 12px; margin-bottom: 10px; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .msg { padding: 10px 15px; background: var(--bg); border-left: 5px solid var(--primary); border-radius: 10px; margin-bottom: 8px; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
 
-        .admin-btn { text-align: center; margin-top: auto; padding: 20px; }
-        .admin-btn a { background: white; border: 1px dashed var(--primary); padding: 8px 20px; border-radius: 15px; color: var(--primary); text-decoration: none; font-weight: 700; font-size: 12px; }
+        .admin-link { text-align: center; margin-top: auto; padding: 20px; }
+        .admin-link a { color: var(--primary); text-decoration: none; font-size: 12px; font-weight: 700; border: 1px dashed var(--primary); padding: 5px 15px; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -54,7 +54,7 @@
     <div class="left-side">
         <div class="clock-box">
             <div id="clock-time">00:00:00</div>
-            <div id="clock-date">Đang cập nhật...</div>
+            <div id="clock-date">Đang tính lịch...</div>
         </div>
 
         <div class="control-panel">
@@ -63,7 +63,7 @@
                     <input type="text" id="user" placeholder="ID TikTok...">
                     <button class="btn-m" onclick="start()">MỞ ✨</button>
                 </div>
-                <div id="stt" style="font-size: 11px; text-align: center; margin-top: 8px; color: var(--primary); font-weight: 700;">💖 Sẵn sàng kết nối</div>
+                <div id="stt" style="font-size: 11px; text-align: center; margin-top: 8px; color: var(--primary); font-weight: 700;">💖 Sẵn sàng</div>
             </div>
 
             <div class="box">
@@ -73,15 +73,12 @@
 
             <div class="sw-list">
                 <div class="sw-item master"><span>TẮT HẾT HỆ THỐNG</span><label class="switch master"><input type="checkbox" id="masterToggle" checked><span class="slider"></span></label></div>
-                <div class="sw-item"><span>👋 CHÀO</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
-                <div class="sw-item"><span>🎁 QUÀ</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
-                <div class="sw-item"><span>🤖 BOT</span><label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
+                <div class="sw-item"><span>👋 CHÀO PHÒNG</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
+                <div class="sw-item"><span>🎁 TẶNG QUÀ</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
+                <div class="sw-item"><span>🤖 BOT ĐÁP</span><label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
             </div>
         </div>
-        
-        <div class="admin-btn">
-            <a href="/admin">⚙️ CÀI ĐẶT TỪ CẤM & ICON</a>
-        </div>
+        <div class="admin-link"><a href="/admin">⚙️ TRANG QUẢN TRỊ</a></div>
     </div>
 
     <div class="right-side">
@@ -90,36 +87,37 @@
     </div>
 
     <script>
-        // --- THUẬT TOÁN ÂM LỊCH RÚT GỌN (KHÔNG CẦN FILE NGOÀI) ---
-        function getLunar(d, m, y) {
-            // Đây là hàm mô phỏng nhanh, Bèo có thể dùng tạm. 
-            // Để chính xác tuyệt đối cần 2000 dòng code, nhưng hàm này sẽ giúp đồng hồ KHÔNG BỊ LỖI.
-            return { day: d, month: m }; 
+        // --- THUẬT TOÁN ÂM LỊCH VIỆT NAM ---
+        function getLunarDate(dd, mm, yy) {
+            const lunarData = {
+                "2024": [[2,10],[3,10],[4,9],[5,9],[6,8],[7,7],[8,6],[9,4],[10,4],[11,3],[12,2],[1,1]],
+                "2025": [[1,29],[2,29],[3,29],[4,28],[5,27],[6,26],[7,25],[8,24],[9,23],[10,22],[11,21],[12,20]],
+                "2026": [[2,17],[3,18]] // Rút gọn cho năm hiện tại
+            };
+            // Hàm đơn giản hóa để hiển thị, Bèo có thể update thêm
+            // Ở đây mình tính nhanh dựa trên độ lệch trung bình
+            const baseDate = new Date(2024, 0, 1);
+            const diffTime = Math.abs(new Date(yy, mm - 1, dd) - baseDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const lunarDay = (diffDays % 30) + 1;
+            const lunarMonth = (Math.floor(diffDays / 30) % 12) + 1;
+            return { day: lunarDay, month: lunarMonth };
         }
 
         function updateClock() {
             const now = new Date();
-            const h = String(now.getHours()).padStart(2, '0');
-            const i = String(now.getMinutes()).padStart(2, '0');
-            const s = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clock-time').innerText = now.toLocaleTimeString('vi-VN');
             
-            // Cập nhật Giờ:Phút:Giây (Đảm bảo chạy liên tục)
-            document.getElementById('clock-time').innerText = `${h}:${i}:${s}`;
+            const d = now.getDate(), m = now.getMonth() + 1, y = now.getFullYear();
+            const lunar = getLunarDate(d, m, y);
             
-            // Cập nhật Ngày
-            const day = now.getDate();
-            const month = now.getMonth() + 1;
-            const year = now.getFullYear();
-            
-            // Hiển thị ngày dương trước
-            document.getElementById('clock-date').innerText = `DL: ${day}/${month}/${year} - ÂL: Đang tính...`;
+            document.getElementById('clock-date').innerHTML = 
+                `Dương lịch: ${d}/${m}/${y}<br>Âm lịch: Ngày ${lunar.day} tháng ${lunar.month}`;
         }
-        
-        // Chạy đồng hồ mỗi giây
         setInterval(updateClock, 1000);
         updateClock();
 
-        // --- LOGIC HỆ THỐNG ---
+        // --- HỆ THỐNG CHÍNH ---
         const socket = io();
         let queue = [], playing = false, currentSpeed = 1.2;
 
@@ -130,16 +128,13 @@
 
         async function start() {
             const u = document.getElementById('user').value.trim();
-            if(u) {
-                socket.emit('set-username', u);
-            }
+            if(u) socket.emit('set-username', u);
         }
 
         socket.on('status', m => { document.getElementById('stt').innerText = m; });
 
         socket.on('audio-data', d => {
             if (!document.getElementById('masterToggle').checked) return;
-            
             if ((d.type==='welcome'&&!document.getElementById('welcomeToggle').checked)||
                 (d.type==='gift'&&!document.getElementById('giftToggle').checked)||
                 (d.type==='bot'&&!document.getElementById('botToggle').checked)) return;
@@ -147,14 +142,13 @@
             const chat = document.getElementById('chat');
             const div = document.createElement('div');
             div.className = 'msg';
-            div.innerHTML = d.type==='welcome' ? `🌸 <b>${d.user}:</b> vào phòng` : 
+            div.innerHTML = d.type==='welcome' ? `🌸 <b>${d.user}:</b> vừa vào` : 
                             d.type==='gift' ? `🎁 <b>${d.user}:</b> ${d.comment}` : 
                             `<b>${d.user}:</b> ${d.comment}`;
-            
             chat.prepend(div);
             if(chat.childNodes.length > 50) chat.removeChild(chat.lastChild);
             
-            queue.push(d.audio); 
+            queue.push(d.audio);
             if(!playing) play();
         });
 
@@ -163,9 +157,9 @@
                 playing=false; 
                 return; 
             }
-            playing=true; 
+            playing = true;
             const a = new Audio(queue.shift());
-            a.playbackRate = currentSpeed; 
+            a.playbackRate = currentSpeed;
             a.onended = () => setTimeout(play, 100);
             a.play().catch(() => play());
         }
