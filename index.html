@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bèo Control 🌸 Super Speed</title>
+    <title>Bèo Control 🌸 Super Speed Fix</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
@@ -16,7 +16,6 @@
         input { background: #fff; border: 2px solid var(--border); padding: 10px; border-radius: 12px; outline: none; flex: 1; font-size: 14px; min-width: 0; }
         .btn-main { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 12px; font-weight: bold; cursor: pointer; }
         
-        /* Speed Slider UI */
         .speed-box { background: #fff0f3; padding: 12px; border-radius: 18px; border: 1px solid var(--border); margin: 5px 0; width: 100%; }
         .speed-info { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 5px; }
         #speed-val { background: var(--primary); color: white; padding: 2px 8px; border-radius: 8px; font-size: 10px; }
@@ -97,13 +96,13 @@
 
         function changeSpeed(v) {
             document.getElementById('speed-val').innerText = v + "x";
-            currentSpeed = parseFloat(v); // Cập nhật ngay lập tức cho biến local
+            currentSpeed = parseFloat(v);
         }
 
         async function start() {
             const u = document.getElementById('user').value.trim();
             if(u) {
-                if('wakeLock' in navigator) await navigator.wakeLock.request('screen');
+                if('wakeLock' in navigator) await navigator.wakeLock.request('screen').catch(()=>{});
                 socket.emit('set-username', u);
             }
         }
@@ -146,7 +145,17 @@
             if ((d.type==='welcome'&&!document.getElementById('welcomeToggle').checked)||(d.type==='gift'&&!document.getElementById('giftToggle').checked)||(d.type==='bot'&&!document.getElementById('botToggle').checked)) return;
             const chat = document.getElementById('chat');
             const div = document.createElement('div');
-            div.className = 'chat-msg'; div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
+            div.className = 'chat-msg'; 
+            
+            // Fix hiển thị tên cho từng loại sự kiện
+            if (d.type === 'welcome') {
+                div.innerHTML = `<span style="color: #ff85a2;">🌸</span> <b>${d.user}:</b> vừa vào phòng`;
+            } else if (d.type === 'gift') {
+                div.innerHTML = `<span style="color: #ffb300;">🎁</span> <b>${d.user}:</b> ${d.comment}`;
+            } else {
+                div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
+            }
+
             chat.prepend(div);
             if(chat.childNodes.length > 30) chat.removeChild(chat.lastChild);
             queue.push(d.audio); if(!playing) play();
@@ -156,10 +165,7 @@
             if(!queue.length){ playing=false; return; }
             playing=true; 
             const a = new Audio(queue.shift());
-            
-            // ÉP TỐC ĐỘ ĐỌC TRÊN TRÌNH DUYỆT
             a.playbackRate = currentSpeed; 
-            
             a.onended = () => setTimeout(play, 150); 
             a.play().catch(() => play());
         }
