@@ -12,7 +12,6 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.json());
 
-// KẾT NỐI DATABASE
 const MONGODB_URI = "mongodb+srv://baoboi97:baoboi97@cluster0.skkajlz.mongodb.net/tiktok_tts?retryWrites=true&w=majority&appName=Cluster0";
 mongoose.connect(MONGODB_URI).then(() => console.log("✅ MongoDB Connected"));
 
@@ -21,7 +20,6 @@ const Acronym = mongoose.model('Acronym', { key: String, value: String });
 const EmojiMap = mongoose.model('EmojiMap', { icon: String, text: String });
 const BotAnswer = mongoose.model('BotAnswer', { keyword: String, response: String });
 
-// API QUẢN TRỊ
 app.get('/api/:path', async (req, res) => {
     const { path } = req.params;
     if (path === 'words') res.json((await BannedWord.find()).map(w => w.word));
@@ -48,7 +46,6 @@ app.delete('/api/:path/:id', async (req, res) => {
     res.sendStatus(200);
 });
 
-// XỬ LÝ TTS & TEXT
 async function getGoogleAudio(text) {
     try {
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.substring(0, 200))}&tl=vi&client=tw-ob`;
@@ -72,7 +69,6 @@ async function processText(text) {
     return processed;
 }
 
-// ROUTES
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 
@@ -116,4 +112,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(process.env.PORT || 3000, () => console.log("🚀 Server Ready"));
+server.listen(process.env.PORT || 3000);
