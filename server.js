@@ -21,10 +21,10 @@ const Acronym = mongoose.model('Acronym', { key: String, value: String });
 const EmojiMap = mongoose.model('EmojiMap', { icon: String, text: String });
 const BotAnswer = mongoose.model('BotAnswer', { keyword: String, response: String });
 
-// --- API QUẢN TRỊ ---
+// API QUẢN TRỊ
 app.get('/api/words', async (req, res) => res.json((await BannedWord.find()).map(w => w.word)));
 app.post('/api/words', async (req, res) => {
-    const word = req.body.word ? req.body.word.toLowerCase().trim() : "";
+    const word = req.body.word?.toLowerCase().trim();
     if (word) await BannedWord.updateOne({ word }, { word }, { upsert: true });
     res.sendStatus(200);
 });
@@ -54,15 +54,22 @@ app.post('/api/bot', async (req, res) => {
 });
 app.delete('/api/bot/:id', async (req, res) => { await BotAnswer.findByIdAndDelete(req.params.id); res.sendStatus(200); });
 
-// HÀM XỬ LÝ VĂN BẢN
+// XỬ LÝ TTS VỚI TỐC ĐỘ LINH HOẠT
+async function getGoogleAudio(text, speed = 1.2) {
+    try {
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.substring(0, 200))}&tl=vi&client=tw-ob&ttsspeed=${speed}`;
+        const res = await axios.get(url, { responseType: 'arraybuffer' });
+        return `data:audio/mp3;base64,${Buffer.from(res.data, 'binary').toString('base64')}`;
+    } catch (e) { return null; }
+}
+
 async function processText(text) {
     if (!text) return null;
     const banned = await BannedWord.find();
     if (banned.some(b => text.toLowerCase().includes(b.word))) return null;
     let processed = text;
     const emojis = await EmojiMap.find();
-    for (const e of emojis) { processed = processed.split(e.icon).join(" " + e.text + " "); }
-    processed = processed.replace(/(\d{2})\d+/g, '$1');
+    for (const e of emojis) processed = processed.split(e.icon).join(" " + e.text + " ");
     const acronyms = await Acronym.find();
     acronyms.forEach(a => {
         const regex = new RegExp(`(?<!\\p{L})${a.key}(?!\\p{L})`, 'giu');
@@ -71,56 +78,50 @@ async function processText(text) {
     return processed;
 }
 
-async function getGoogleAudio(text) {
-    try {
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.substring(0, 200))}&tl=vi&client=tw-ob`;
-        const res = await axios.get(url, { responseType: 'arraybuffer' });
-        return `data:audio/mp3;base64,${Buffer.from(res.data, 'binary').toString('base64')}`;
-    } catch (e) { return null; }
-}
-
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 io.on('connection', (socket) => {
     let tiktok;
+    let userSpeed = 1.2;
+
+    socket.on('change-speed', (val) => { userSpeed = parseFloat(val); });
+
     socket.on('set-username', (username) => {
         if (tiktok) tiktok.disconnect();
         tiktok = new WebcastPushConnection(username, { processInitialData: false });
-        tiktok.connect()
-            .then(() => socket.emit('status', `✅ Kết nối thành công: ${username}`))
-            .catch(err => socket.emit('status', `❌ Lỗi: ${err.message}`));
+        tiktok.connect().then(() => socket.emit('status', `✅ Đã kết nối: ${username}`)).catch(e => socket.emit('status', `❌ Lỗi: ${e.message}`));
 
         tiktok.on('chat', async (data) => {
             const botRules = await BotAnswer.find();
             const match = botRules.find(r => data.comment.toLowerCase().includes(r.keyword));
             if (match) {
-                const audio = await getGoogleAudio(`Anh ${data.nickname} ơi, ${match.response}`);
+                const audio = await getGoogleAudio(`Anh ${data.nickname} ơi, ${match.response}`, userSpeed);
                 socket.emit('audio-data', { type: 'bot', user: "TRỢ LÝ", comment: match.response, audio });
             } else {
-                const finalContent = await processText(data.comment);
-                if (finalContent) {
-                    const audio = await getGoogleAudio(`${data.nickname} nói: ${finalContent}`);
+                const clean = await processText(data.comment);
+                if (clean) {
+                    const audio = await getGoogleAudio(`${data.nickname} nói: ${clean}`, userSpeed);
                     socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: data.comment, audio });
                 }
             }
         });
 
         tiktok.on('member', async (data) => {
-            const safeName = await processText(data.nickname);
-            if (safeName) {
-                const audio = await getGoogleAudio(`Bèo ơi, anh ${safeName} ghé chơi nè`);
+            const safe = await processText(data.nickname);
+            if (safe) {
+                const audio = await getGoogleAudio(`Bèo ơi, anh ${safe} ghé chơi nè`, userSpeed);
                 socket.emit('audio-data', { type: 'welcome', user: "Hệ thống", comment: "Vào phòng", audio });
             }
         });
 
         tiktok.on('gift', async (data) => {
             if (data.gift && data.repeatEnd) {
-                const safeName = await processText(data.nickname);
-                const audio = await getGoogleAudio(`Cảm ơn ${safeName} đã góp gạo nuôi bèo`);
+                const safe = await processText(data.nickname);
+                const audio = await getGoogleAudio(`Cảm ơn ${safe} đã tặng quà nuôi bèo`, userSpeed);
                 socket.emit('audio-data', { type: 'gift', user: "QUÀ", comment: `Tặng ${data.giftName}`, audio });
             }
         });
     });
 });
 
-server.listen(process.env.PORT || 3000, () => console.log("Server is running..."));
+server.listen(process.env.PORT || 3000);
