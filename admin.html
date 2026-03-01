@@ -6,23 +6,23 @@
     <title>Bèo Admin 🌸</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
-        body { font-family: 'Quicksand', sans-serif; background: #fff5f7; color: #5d4037; padding: 20px; margin: 0; }
-        .admin-panel { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 25px; border: 2px solid #f8bbd0; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        body { font-family: 'Quicksand', sans-serif; background: #fff5f7; color: #5d4037; padding: 20px; }
+        .panel { max-width: 600px; margin: auto; background: white; padding: 25px; border-radius: 25px; border: 2px solid #f8bbd0; }
         h2 { color: #ff85a2; text-align: center; }
-        .tabs { display: flex; gap: 5px; background: #fff0f3; padding: 5px; border-radius: 15px; margin-bottom: 15px; }
-        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 10px; font-weight: bold; font-size: 12px; }
+        .tabs { display: flex; gap: 5px; background: #fff0f3; padding: 5px; border-radius: 15px; margin-bottom: 20px; }
+        .tab { flex: 1; text-align: center; padding: 12px; cursor: pointer; border-radius: 10px; font-weight: bold; }
         .tab.active { background: #ff85a2; color: white; }
-        .add-box { display: flex; gap: 10px; margin-bottom: 15px; }
+        .add-box { display: flex; gap: 10px; margin-bottom: 20px; }
         input { flex: 1; padding: 12px; border: 2px solid #f8bbd0; border-radius: 12px; outline: none; }
         .btn { background: #ff85a2; color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; }
-        .list { height: 350px; overflow-y: auto; border: 1px solid #eee; border-radius: 15px; padding: 10px; }
-        .item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .list { height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 15px; padding: 10px; }
+        .item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
         .del { color: #ff5252; cursor: pointer; font-weight: bold; }
-        .back { display: block; text-align: center; margin-top: 15px; color: #ff85a2; text-decoration: none; font-size: 13px; }
+        .back { display: block; text-align: center; margin-top: 20px; color: #ff85a2; text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="admin-panel">
+    <div class="panel">
         <h2>CÀI ĐẶT BÈO ⚙️</h2>
         <div class="tabs">
             <div class="tab active" id="btn-ban" onclick="switchTab('ban')">CẤM</div>
@@ -36,7 +36,7 @@
             <button class="btn" onclick="handleAdd()">LƯU</button>
         </div>
         <div class="list" id="display"></div>
-        <a href="/" class="back">⬅ VỀ TRANG LIVE</a>
+        <a href="/" class="back">⬅ QUAY LẠI TRANG CHỦ</a>
     </div>
     <script>
         let curTab = 'ban';
@@ -59,8 +59,10 @@
         async function handleAdd() {
             const p = curTab==='ban'?'words':curTab==='acr'?'acronyms':curTab==='emo'?'emojis':'bot';
             const v1 = document.getElementById('inp-1').value, v2 = document.getElementById('inp-2').value;
+            if(!v1) return;
             const body = curTab==='ban'?{word:v1}:curTab==='acr'?{key:v1,value:v2}:curTab==='emo'?{icon:v1,text:v2}:{keyword:v1,response:v2};
             await fetch(`/api/${p}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+            document.getElementById('inp-1').value=''; document.getElementById('inp-2').value='';
             load();
         }
         async function del(p, id) {
