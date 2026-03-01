@@ -3,26 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bèo Google 🌸 Speed Edition</title>
+    <title>Bèo Control 🌸 Fix Giao Diện</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
         :root { --primary: #ff85a2; --bg: #fff5f7; --card: #ffffff; --text: #5d4037; --border: #f8bbd0; --accent: #4dd0e1; }
+        * { box-sizing: border-box; }
         body { font-family: 'Quicksand', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
         .header-panel { background: var(--card); border-bottom: 2px solid var(--border); padding: 15px; display: flex; flex-direction: column; gap: 8px; z-index: 10; border-radius: 0 0 25px 25px; box-shadow: 0 4px 15px rgba(248, 187, 208, 0.4); }
         h2 { color: var(--primary); margin: 0; font-size: 20px; text-align: center; font-weight: 700; }
-        .wake-status { font-size: 10px; text-align: center; color: #999; }
-        .conn-box { display: flex; gap: 8px; }
-        input { background: #fff; border: 2px solid var(--border); padding: 10px; border-radius: 12px; outline: none; flex: 1; font-size: 14px; }
+        .wake-status { font-size: 10px; text-align: center; color: #999; margin-bottom: 2px; }
+        
+        .conn-box { display: flex; gap: 8px; width: 100%; }
+        input { background: #fff; border: 2px solid var(--border); padding: 10px; border-radius: 12px; outline: none; flex: 1; font-size: 14px; min-width: 0; }
         .btn-main { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 12px; font-weight: bold; cursor: pointer; min-width: 65px; }
         
-        .speed-box { background: #fff0f3; padding: 10px; border-radius: 18px; border: 1px solid var(--border); margin: 5px 0; }
-        .speed-box span { font-size: 11px; font-weight: 700; color: var(--primary); }
+        /* Box tốc độ fix lỗi tràn */
+        .speed-box { background: #fff0f3; padding: 12px; border-radius: 18px; border: 1px solid var(--border); margin: 5px 0; width: 100%; }
+        .speed-info { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 5px; }
+        #speed-val { background: var(--primary); color: white; padding: 2px 8px; border-radius: 8px; font-size: 10px; }
         
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; margin: 8px 0; }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: #ffd1dc; border-radius: 10px; }
+        input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: var(--primary); cursor: pointer; -webkit-appearance: none; margin-top: -5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
         .toggle-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; background: #fffbfd; padding: 10px; border-radius: 18px; border: 1px solid var(--border); }
         .toggle-item { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 600; }
-        
-        /* UI Switch */
         .switch { position: relative; width: 34px; height: 18px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #e0e0e0; transition: .4s; border-radius: 20px; }
@@ -31,24 +39,24 @@
         input:checked + .slider:before { transform: translateX(16px); }
 
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 12px; gap: 12px; }
-        .panel { background: var(--card); border-radius: 20px; border: 2px solid var(--border); overflow: hidden; display: flex; flex-direction: column; }
+        .panel { background: var(--card); border-radius: 20px; border: 2px solid var(--border); overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
         .tab-header { padding: 8px; background: #fff0f3; display: flex; justify-content: space-around; }
         .tab { padding: 6px 10px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 700; color: #8d6e63; }
         .tab.active { background: var(--primary); color: white; }
         .add-box { padding: 10px; display: flex; gap: 5px; border-bottom: 1px solid var(--border); align-items: center; }
-        .data-list { height: 150px; overflow-y: auto; padding: 8px; }
-        .chat-list { flex: 1; overflow-y: auto; padding: 10px; min-height: 200px; }
+        .data-list { height: 150px; overflow-y: auto; padding: 8px; background: #fffbfd; }
+        .chat-list { flex: 1; overflow-y: auto; padding: 10px; min-height: 200px; background: #fffbfd; }
         .chat-msg { padding: 8px 12px; border-radius: 12px; background: white; border-left: 4px solid var(--primary); margin-bottom: 6px; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .item { display: flex; justify-content: space-between; padding: 6px 10px; background: #fff; border-radius: 8px; margin-bottom: 5px; font-size: 12px; border: 1px solid #eee; }
-        .del { color: red; font-weight: bold; cursor: pointer; }
+        .del { color: #ff5252; font-weight: bold; cursor: pointer; padding: 0 5px; }
 
-        @media (min-width: 768px) { body { flex-direction: row; } .header-panel { width: 300px; height: 100vh; border-radius: 0 25px 25px 0; } .main-content { display: grid; grid-template-columns: 1fr 1fr; } }
+        @media (min-width: 768px) { body { flex-direction: row; } .header-panel { width: 300px; height: 100vh; border-radius: 0 25px 25px 0; border-bottom: none; border-right: 2px solid var(--border); } .main-content { display: grid; grid-template-columns: 1fr 1fr; } .data-list { height: auto; } }
     </style>
 </head>
 <body>
     <div class="header-panel">
-        <h2>BÈO Google 🌸</h2>
-        <div id="wakeStatus" class="wake-status">Màn hình: Chế độ thường</div>
+        <h2>BÈO CONTROL 🌸</h2>
+        <div id="wakeStatus" class="wake-status">Màn hình: Tự động tắt</div>
         <div class="conn-box">
             <input type="text" id="user" placeholder="ID TikTok...">
             <button class="btn-main" onclick="start()">Mở ✨</button>
@@ -56,10 +64,11 @@
         <div id="stt" style="font-size: 11px; text-align: center; font-weight: 700; color: var(--accent);">💖 Sẵn sàng kết nối</div>
         
         <div class="speed-box">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                <span>Tốc độ đọc: <span id="speed-val">1.2</span>x</span>
+            <div class="speed-info">
+                <span>TỐC ĐỘ ĐỌC</span>
+                <span id="speed-val">1.2x</span>
             </div>
-            <input type="range" id="speed-range" min="0.5" max="2.0" step="0.1" value="1.2" style="width:100%; accent-color: var(--primary);" oninput="changeSpeed(this.value)">
+            <input type="range" id="speed-range" min="0.5" max="2.0" step="0.1" value="1.2" oninput="changeSpeed(this.value)">
         </div>
 
         <div class="toggle-group">
@@ -96,7 +105,7 @@
         let curTab = 'ban', queue = [], playing = false, wakeLock = null;
 
         function changeSpeed(v) {
-            document.getElementById('speed-val').innerText = v;
+            document.getElementById('speed-val').innerText = v + "x";
             socket.emit('change-speed', v);
         }
 
@@ -104,9 +113,11 @@
             const u = document.getElementById('user').value.trim();
             if(!u) return;
             if('wakeLock' in navigator) {
-                wakeLock = await navigator.wakeLock.request('screen');
-                document.getElementById('wakeStatus').innerText = "Màn hình: Đang giữ sáng 💡";
-                document.getElementById('wakeStatus').style.color = "#4dd0e1";
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    document.getElementById('wakeStatus').innerText = "Màn hình: Đang giữ sáng 💡";
+                    document.getElementById('wakeStatus').style.color = "#4dd0e1";
+                } catch(e){}
             }
             socket.emit('set-username', u);
         }
