@@ -3,48 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bèo Control 🌸</title>
+    <title>Bèo Google 🌸 PK Master</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
-        :root { --primary: #ff85a2; --bg: #fff5f7; --card: #ffffff; --text: #5d4037; --border: #f8bbd0; --success: #4caf50; --error: #ff5252; }
-        
+        :root { --primary: #ff85a2; --bg: #fff5f7; --card: #ffffff; --text: #5d4037; --border: #f8bbd0; --success: #4caf50; --error: #ff5252; --pk: #4dd0e1; }
         * { box-sizing: border-box; }
-        body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; color: var(--text); overflow: hidden; }
+        body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; color: var(--text); overflow-x: hidden; }
 
-        /* BỐ CỤC TỔNG THỂ */
         .app-container { display: flex; height: 100vh; width: 100vw; }
-
-        /* CỘT TRÁI (PC) */
         .left-side { width: 330px; display: flex; flex-direction: column; border-right: 2px solid var(--border); background: #fff; flex-shrink: 0; }
-        
-        /* CỘT PHẢI / DƯỚI (NHẬT KÝ) */
         .right-side { flex: 1; display: flex; flex-direction: column; padding: 15px; background: var(--bg); overflow: hidden; }
 
-        /* ĐỒNG HỒ THU GỌN */
         .clock-box { background: linear-gradient(135deg, #ff85a2, #ffb3c6); color: white; padding: 12px; text-align: center; border-radius: 0 0 20px 20px; box-shadow: 0 4px 10px rgba(255,133,162,0.2); }
         #clock-time { font-size: 30px; font-weight: 700; line-height: 1; }
         #clock-date { font-size: 11px; opacity: 0.9; margin: 3px 0; }
         .brand { font-size: 13px; font-weight: 700; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 3px; }
 
-        /* PANEL ĐIỀU KHIỂN */
         .control-panel { padding: 12px; display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; }
-        
-        /* KHUNG KẾT NỐI (FIX VỠ KHUNG) */
         .box-conn { background: #fff; border: 2px solid var(--border); padding: 12px; border-radius: 18px; display: flex; flex-direction: column; gap: 8px; }
         .conn-row { display: flex; gap: 5px; }
-        input[type="text"] { flex: 1; padding: 10px; border-radius: 10px; border: 2px solid var(--border); outline: none; font-size: 14px; min-width: 0; }
+        input[type="text"] { flex: 1; padding: 10px; border-radius: 10px; border: 2px solid var(--border); outline: none; font-size: 14px; }
         .btn-conn { background: var(--primary); color: white; border: none; padding: 0 15px; border-radius: 10px; font-weight: 700; cursor: pointer; white-space: nowrap; font-size: 13px; }
 
         #stt-container { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 8px; border-radius: 10px; background: #fff8f9; border: 1px dashed var(--border); min-height: 35px; }
         .stt-success { color: var(--success); border-color: var(--success); background: #f1f8f1; }
         .stt-error { color: var(--error); border-color: var(--error); background: #fff1f1; }
 
-        /* CÁC NÚT BẬT TẮT */
         .sw-list { display: flex; flex-direction: column; gap: 6px; }
         .sw-item { background: white; border: 1px solid var(--border); padding: 10px 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; }
         .sw-item.master { border-color: var(--error); color: var(--error); }
-        .sw-item.pk { border-color: #4dd0e1; color: #00acc1; }
+        .sw-item.pk { border-color: var(--pk); color: #00acc1; }
 
         .switch { position: relative; width: 34px; height: 18px; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -52,22 +41,20 @@
         .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background: var(--primary); }
         .master input:checked + .slider { background: var(--error); }
+        .pk input:checked + .slider { background: var(--pk); }
         input:checked + .slider:before { transform: translateX(16px); }
 
-        /* NHẬT KÝ */
         .journal-header { background: white; padding: 10px 15px; border-radius: 15px 15px 0 0; border: 2px solid var(--border); border-bottom: none; font-weight: 700; color: var(--primary); font-size: 13px; }
         .journal-content { flex: 1; background: white; border: 2px solid var(--border); border-radius: 0 0 15px 15px; overflow-y: auto; padding: 10px; }
         .msg { padding: 8px 12px; background: var(--bg); border-left: 4px solid var(--primary); border-radius: 8px; margin-bottom: 6px; font-size: 13px; word-break: break-word; }
 
-        /* --- GIAO DIỆN MOBILE --- */
         @media (max-width: 768px) {
-            body { overflow-y: auto; height: auto; } /* Cho phép kéo toàn trang trên mobile */
+            body { overflow-y: auto; height: auto; }
             .app-container { flex-direction: column; height: auto; }
             .left-side { width: 100%; border-right: none; height: auto; }
-            .right-side { width: 100%; height: 600px; padding: 10px; } /* Nhật ký có chiều cao cố định để scroll bên trong */
+            .right-side { width: 100%; height: 500px; padding: 10px; }
             .sw-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
             .sw-item.master { grid-column: span 2; }
-            .clock-box { border-radius: 0; }
         }
     </style>
 </head>
@@ -77,7 +64,7 @@
     <div class="left-side">
         <div class="clock-box">
             <div id="clock-time">00:00:00</div>
-            <div id="clock-date">DL: --/--/---- - ÂL: --/--</div>
+            <div id="clock-date">Đang tải...</div>
             <div class="brand">Bèo Google 🌸</div>
         </div>
 
@@ -124,6 +111,7 @@
     const socket = io();
     let queue = [], playing = false, currentSpeed = 1.2;
 
+    // --- 1. ĐỒNG HỒ ---
     function updateClock() {
         const now = new Date();
         document.getElementById('clock-time').innerText = now.toLocaleTimeString('vi-VN');
@@ -134,9 +122,18 @@
     }
     setInterval(updateClock, 1000); updateClock();
 
-    async function speakNotification(text) {
+    // --- 2. XỬ LÝ SỐ TRƯỚC KHI ĐỌC ---
+    function cleanText(text) {
+        // Nếu comment có chuỗi số dài hơn 4 ký tự (như SĐT), chỉ giữ lại 3 số đầu
+        return text.replace(/\d{5,}/g, (match) => match.substring(0, 3) + "...");
+    }
+
+    // --- 3. GIỌNG NÓI HỆ THỐNG ---
+    async function speakSystem(text) {
+        if (!document.getElementById('masterToggle').checked) return;
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`;
         const audio = new Audio(url);
+        audio.playbackRate = currentSpeed;
         audio.play().catch(() => {});
     }
 
@@ -145,6 +142,7 @@
         currentSpeed = parseFloat(v);
     }
 
+    // --- 4. KẾT NỐI & WAKE LOCK ---
     async function start() {
         const u = document.getElementById('user').value.trim();
         if(!u) return;
@@ -161,23 +159,43 @@
             document.getElementById('stt-icon').innerText = "✅";
             document.getElementById('stt-text').innerText = `Kết nối thành công: ${u}`;
             sttBox.className = "stt-success";
-            speakNotification("Đã kết nối, bắt đầu đọc comment nha Bèo");
+            speakSystem("Đã kết nối, bắt đầu đọc comment nha Bèo");
         } else {
             document.getElementById('stt-icon').innerText = "❌";
             document.getElementById('stt-text').innerText = "Lỗi hệ thống, bấm lại nha";
             sttBox.className = "stt-error";
-            speakNotification("Lỗi hệ thống, bấm kết nối lại nha");
+            speakSystem("Lỗi hệ thống, bấm kết nối lại nha");
         }
     });
 
+    // --- 5. LOGIC NHẮC PK 20 GIÂY (PHÁT NGAY LẬP TỨC) ---
+    socket.on('linkMicArmies', (data) => {
+        if (document.getElementById('pkToggle').checked) {
+            // Khi nhận được sự kiện trận đấu (server cần gửi trigger này)
+            // Câu thoại mới nhất Bèo yêu cầu
+            speakSystem("20 giây cuối thả bông lấy găng Bèo ơi");
+        }
+    });
+
+    // --- 6. NHẬN DATA CHAT/GIFT/WELCOME ---
     socket.on('audio-data', d => {
         if (!document.getElementById('masterToggle').checked) return;
+        
+        // Kiểm tra Switch cho từng loại
+        if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
+        if (d.type === 'gift' && !document.getElementById('giftToggle').checked) return;
+        if (d.type === 'bot' && !document.getElementById('botToggle').checked) return;
+
         const chat = document.getElementById('chat');
         const div = document.createElement('div');
         div.className = 'msg';
         div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
         chat.prepend(div);
+        
+        // Giữ lại 50 tin nhắn mới nhất
         if(chat.childNodes.length > 50) chat.removeChild(chat.lastChild);
+
+        // Đưa vào hàng đợi
         queue.push(d.audio);
         if(!playing) play();
     });
