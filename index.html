@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bèo Control 🌸 Smart Bot Pro</title>
+    <title>Bèo Control 🌸 Smart Bot Fix</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
@@ -56,7 +56,7 @@
     <div class="left-side">
         <div class="clock-box">
             <div id="clock-time">00:00:00</div>
-            <div id="clock-date">Đang tải...</div>
+            <div id="clock-date">Đang tải dữ liệu...</div>
             <div class="brand">Bèo Google 🌸</div>
         </div>
 
@@ -86,9 +86,6 @@
                 <div class="sw-item"><span>🎁 TẶNG QUÀ</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
                 <div class="sw-item"><span>🤖 BOT ĐÁP</span><label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
             </div>
-            <div style="text-align: center; margin-top: auto; padding: 10px;">
-                <a href="/admin" style="color: var(--primary); text-decoration: none; font-size: 11px; font-weight: 700; border: 1px dashed var(--primary); padding: 5px 12px; border-radius: 8px;">⚙️ QUẢN LÝ DỮ LIỆU</a>
-            </div>
         </div>
     </div>
     <div class="right-side">
@@ -101,52 +98,54 @@
     const socket = io();
     let queue = [], playing = false, currentSpeed = 1.2;
 
-    // --- 1. ĐỒNG HỒ & LỊCH ---
-    function getLunarInfo() {
+    // --- 1. ĐỒNG HỒ & LỊCH ÂM 2026 ---
+    function getLunarDate() {
         const now = new Date();
-        const diff = Math.floor((now - new Date(2024,0,1)) / 86400000);
-        const lDay = (diff % 30) + 1;
-        const lMonth = (Math.floor(diff / 30) % 12) + 1;
-        const lYear = 2024 + Math.floor(diff / 354); // Tính tương đối
-        return { d: lDay, m: lMonth, y: lYear };
+        // Thuật toán tính lịch âm rút gọn cho năm 2026
+        // 17/02/2026 Dương là 01/01/2026 Âm (Tết Bính Ngọ)
+        const tet2026 = new Date(2026, 1, 17);
+        const diffDays = Math.floor((now - tet2026) / (24 * 60 * 60 * 1000));
+        
+        if (diffDays < 0) return "Chưa cập nhật";
+        
+        // Tính toán tương đối (Tháng 1 có 30 ngày)
+        let lMonth = 1;
+        let lDay = diffDays + 1;
+        if (lDay > 30) { lDay -= 30; lMonth = 2; }
+        
+        return { d: lDay, m: lMonth };
     }
 
     function updateClock() {
         const now = new Date();
         document.getElementById('clock-time').innerText = now.toLocaleTimeString('vi-VN');
         const d = now.getDate(), m = now.getMonth() + 1, y = now.getFullYear();
-        const lunar = getLunarInfo();
+        const lunar = getLunarDate();
         document.getElementById('clock-date').innerText = `DL: ${d}/${m}/${y} - ÂL: ${lunar.d}/${lunar.m}`;
     }
     setInterval(updateClock, 1000); updateClock();
 
-    // --- 2. HÀM HỎI GIỜ/DƯƠNG/ÂM ---
-    function checkDateTimeQuery(text) {
-        const lowerText = text.toLowerCase();
+    // --- 2. HÀM CHECK TỪ KHÓA (NGOÀI CÙNG) ---
+    function checkSmartBot(text) {
+        if (!document.getElementById('botToggle').checked) return null;
+        const low = text.toLowerCase();
         const now = new Date();
-        
-        // Hỏi giờ
-        if (lowerText.includes("mấy giờ") || lowerText.includes("giờ rồi")) {
-            return `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.`;
-        }
-        
-        // Hỏi ngày âm
-        if (lowerText.includes("âm lịch") || lowerText.includes("ngày âm") || lowerText.includes("âm bao nhiêu")) {
-            const lunar = getLunarInfo();
-            return `Hôm nay là ngày ${lunar.d} tháng ${lunar.m} âm lịch Bèo ơi.`;
-        }
+        const lunar = getLunarDate();
 
-        // Hỏi ngày dương/thứ
-        if (lowerText.includes("ngày mấy") || lowerText.includes("hôm nay ngày") || lowerText.includes("thứ mấy")) {
-            const weekdays = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
-            return `Hôm nay là ${weekdays[now.getDay()]}, ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}.`;
+        if (low.includes("mấy giờ") || low.includes("giờ rồi")) {
+            return `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút Bèo ơi.`;
         }
-        
+        if (low.includes("âm lịch") || low.includes("ngày âm") || low.includes("âm bao nhiêu")) {
+            return `Hôm nay là ngày mùng ${lunar.d} tháng ${lunar.m} âm lịch nha.`;
+        }
+        if (low.includes("ngày mấy") || low.includes("hôm nay ngày") || low.includes("thứ mấy")) {
+            const thu = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+            return `Hôm nay là ${thu[now.getDay()]}, ngày ${now.getDate()} tháng ${now.getMonth() + 1} dương lịch.`;
+        }
         return null;
     }
 
     async function speakSystem(text) {
-        if (!document.getElementById('masterToggle').checked) return;
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`;
         const audio = new Audio(url);
         audio.playbackRate = currentSpeed;
@@ -163,7 +162,6 @@
         if(!u) return;
         document.getElementById('stt-icon').innerText = "⏳";
         document.getElementById('stt-text').innerText = "Đang kết nối...";
-        if ('wakeLock' in navigator) await navigator.wakeLock.request('screen').catch(()=>{});
         socket.emit('set-username', u);
     }
 
@@ -189,7 +187,8 @@
 
     socket.on('audio-data', d => {
         if (!document.getElementById('masterToggle').checked) return;
-        
+
+        // Nhật ký chat
         const chat = document.getElementById('chat');
         const div = document.createElement('div');
         div.className = 'msg';
@@ -197,17 +196,16 @@
         chat.prepend(div);
         if(chat.childNodes.length > 50) chat.removeChild(chat.lastChild);
 
-        // LOGIC BOT ĐÁP THÔNG MINH
-        if (document.getElementById('botToggle').checked && d.type === 'bot') {
-            const botResponse = checkDateTimeQuery(d.comment);
-            if (botResponse) {
-                const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(botResponse)}&tl=vi&client=tw-ob`;
-                queue.push(url);
-                if(!playing) play();
-                return; 
-            }
+        // 1. ƯU TIÊN KIỂM TRA HỎI ĐÁP THÔNG MINH
+        const botRep = checkSmartBot(d.comment);
+        if (botRep) {
+            const botUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(botRep)}&tl=vi&client=tw-ob`;
+            queue.push(botUrl);
+            if(!playing) play();
+            return; // Đã trả lời thì không đọc lại comment gốc
         }
 
+        // 2. NẾU KHÔNG PHẢI HỎI GIỜ THÌ ĐỌC BÌNH THƯỜNG THEO SWITCH
         if ((d.type==='welcome'&&document.getElementById('welcomeToggle').checked) ||
             (d.type==='gift'&&document.getElementById('giftToggle').checked) ||
             (d.type==='bot'&&document.getElementById('botToggle').checked)) {
