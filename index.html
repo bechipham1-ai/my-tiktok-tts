@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bèo Control 🌸 Fix Triệt Để</title>
+    <title>Bèo Control 🌸 Super Fix</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
@@ -45,8 +45,6 @@
             .app-container { flex-direction: column; height: auto; }
             .left-side { width: 100%; border-right: none; height: auto; }
             .right-side { width: 100%; height: 500px; padding: 10px; }
-            .sw-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-            .sw-item.master { grid-column: span 2; }
         }
     </style>
 </head>
@@ -86,28 +84,35 @@
     const socket = io();
     let queue = [], playing = false;
 
-    // --- 1. ĐỒNG HỒ & NGÀY ÂM ---
+    // --- 1. ĐỒNG HỒ ---
     function updateClock() {
         const now = new Date();
         document.getElementById('clock-time').innerText = now.toLocaleTimeString('vi-VN');
-        // Tính ngày âm 2026 (17/2/2026 dương = 1/1 âm)
         const tet = new Date(2026, 1, 17);
         const diff = Math.floor((now - tet) / 86400000);
-        let lDay = diff + 1, lMonth = 1;
-        if (lDay > 30) { lDay -= 30; lMonth = 2; }
+        let lDay = (diff % 30) + 1, lMonth = Math.floor(diff/30) + 1;
         document.getElementById('clock-date').innerText = `DL: ${now.getDate()}/${now.getMonth()+1} - ÂL: ${lDay}/${lMonth}`;
         return { lDay, lMonth, now };
     }
     setInterval(updateClock, 1000);
 
-    // --- 2. HỎI ĐÁP THÔNG MINH ---
+    // --- 2. HÀM TẠO AUDIO DỰ PHÒNG ---
+    function getTTSUrl(text) {
+        // Lọc spam sơ bộ trước khi đọc
+        let clean = text.replace(/([\uD800-\uDBFF][\uDC00-\uDFFF]){2,}/g, '$1'); 
+        return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(clean)}&tl=vi&client=tw-ob`;
+    }
+
+    // --- 3. KIỂM TRA BOT ĐÁP ---
     function checkSmartBot(text) {
         if (!document.getElementById('botToggle').checked) return null;
         const low = text.toLowerCase();
-        const { lDay, lMonth, now } = updateClock();
+        const now = new Date();
+        const diff = Math.floor((now - new Date(2026,1,17)) / 86400000);
+        let lDay = (diff % 30) + 1, lMonth = Math.floor(diff/30) + 1;
         
-        if (low.includes("mấy giờ") || low.includes("giờ rồi")) return `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.`;
-        if (low.includes("âm lịch") || low.includes("ngày âm") || low.includes("âm bao nhiêu")) return `Hôm nay là mùng ${lDay} tháng ${lMonth} âm lịch Bèo ơi.`;
+        if (low.includes("mấy giờ")) return `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.`;
+        if (low.includes("âm lịch") || low.includes("ngày âm")) return `Hôm nay là mùng ${lDay} tháng ${lMonth} âm lịch.`;
         if (low.includes("ngày mấy") || low.includes("thứ mấy")) {
             const thu = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
             return `Hôm nay là ${thu[now.getDay()]}, ngày ${now.getDate()} tháng ${now.getUTCMonth()+1}.`;
@@ -115,9 +120,9 @@
         return null;
     }
 
-    // --- 3. XỬ LÝ CHÍNH ---
+    // --- 4. LUỒNG XỬ LÝ CHÍNH ---
     socket.on('audio-data', d => {
-        // LUÔN HIỆN CHAT
+        // LUÔN HIỆN NHẬT KÝ
         const chat = document.getElementById('chat');
         const div = document.createElement('div');
         div.className = 'msg';
@@ -125,23 +130,26 @@
         chat.prepend(div);
         if(chat.childNodes.length > 50) chat.removeChild(chat.lastChild);
 
-        // NẾU MASTER TẮT THÌ DỪNG
         if (!document.getElementById('masterToggle').checked) return;
 
-        // KIỂM TRA BOT ĐÁP (HỎI GIỜ/NGÀY)
+        // ƯU TIÊN 1: BOT ĐÁP
         const botRep = checkSmartBot(d.comment);
         if (botRep) {
-            const botUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(botRep)}&tl=vi&client=tw-ob`;
-            queue.push(botUrl);
-        } else {
-            // ĐỌC CMT BÌNH THƯỜNG THEO SWITCH
-            let canPlay = false;
-            if (d.type === 'welcome' && document.getElementById('welcomeToggle').checked) canPlay = true;
-            else if (d.type === 'gift' && document.getElementById('giftToggle').checked) canPlay = true;
-            else if (d.type === 'bot' && document.getElementById('botToggle').checked) canPlay = true;
-            else if (!d.type) canPlay = true; // NẾU KHÔNG CÓ TYPE THÌ CỨ ĐỌC (QUAN TRỌNG)
+            queue.push(getTTSUrl(botRep));
+        } 
+        // ƯU TIÊN 2: ĐỌC COMMENT THEO NÚT BẬT/TẮT
+        else {
+            let shouldRead = false;
+            if (d.type === 'welcome' && document.getElementById('welcomeToggle').checked) shouldRead = true;
+            else if (d.type === 'gift' && document.getElementById('giftToggle').checked) shouldRead = true;
+            else if (d.type === 'bot' && document.getElementById('botToggle').checked) shouldRead = true;
+            else if (!d.type) shouldRead = true; // Trường hợp không phân loại (chat thường)
 
-            if (canPlay && d.audio) queue.push(d.audio);
+            if (shouldRead) {
+                // Nếu server có audio thì lấy, không thì tự tạo audio từ comment
+                const audioUrl = d.audio ? d.audio : getTTSUrl(`${d.user} nói: ${d.comment}`);
+                queue.push(audioUrl);
+            }
         }
         
         if(!playing) play();
@@ -149,8 +157,7 @@
 
     socket.on('linkMicArmies', () => {
         if (document.getElementById('pkToggle').checked) {
-            const pkUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent("20 giây cuối thả bông lấy găng Bèo ơi")}&tl=vi&client=tw-ob`;
-            queue.push(pkUrl);
+            queue.push(getTTSUrl("20 giây cuối thả bông lấy găng Bèo ơi"));
             if(!playing) play();
         }
     });
@@ -167,7 +174,6 @@
         const u = document.getElementById('user').value.trim();
         if(!u) return;
         socket.emit('set-username', u);
-        if ('wakeLock' in navigator) navigator.wakeLock.request('screen');
     }
 
     socket.on('status', m => {
