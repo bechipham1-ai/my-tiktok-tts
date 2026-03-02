@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bèo Control 🌸 Super Fix</title>
+    <title>Bèo Control 🌸 Bản Khôi Phục Đầy Đủ</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
@@ -40,12 +40,6 @@
         .journal-header { background: white; padding: 10px 15px; border-radius: 15px 15px 0 0; border: 2px solid var(--border); border-bottom: none; font-weight: 700; color: var(--primary); font-size: 13px; }
         .journal-content { flex: 1; background: white; border: 2px solid var(--border); border-radius: 0 0 15px 15px; overflow-y: auto; padding: 10px; }
         .msg { padding: 8px 12px; background: var(--bg); border-left: 4px solid var(--primary); border-radius: 8px; margin-bottom: 6px; font-size: 13px; word-break: break-word; }
-        @media (max-width: 768px) {
-            body { overflow-y: auto; height: auto; }
-            .app-container { flex-direction: column; height: auto; }
-            .left-side { width: 100%; border-right: none; height: auto; }
-            .right-side { width: 100%; height: 500px; padding: 10px; }
-        }
     </style>
 </head>
 <body>
@@ -63,7 +57,13 @@
                     <input type="text" id="user" placeholder="Nhập ID TikTok...">
                     <button class="btn-conn" onclick="start()">KẾT NỐI</button>
                 </div>
-                <div id="stt-container"><span id="stt-icon">✨</span> <span id="stt-text">Sẵn sàng</span></div>
+                <div id="stt-container"><span id="stt-icon">✨</span> <span id="stt-text">Hệ thống sẵn sàng</span></div>
+            </div>
+            <div class="box-conn" style="padding: 10px;">
+                <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: var(--primary); margin-bottom: 5px;">
+                    <span>TỐC ĐỘ ĐỌC</span><span id="speed-val">1.2x</span>
+                </div>
+                <input type="range" id="speed-range" min="0.5" max="2.0" step="0.1" value="1.2" oninput="changeSpeed(this.value)" style="width: 100%;">
             </div>
             <div class="sw-list">
                 <div class="sw-item master"><span>TẮT HỆ THỐNG</span><label class="switch master"><input type="checkbox" id="masterToggle" checked><span class="slider"></span></label></div>
@@ -82,9 +82,9 @@
 
 <script>
     const socket = io();
-    let queue = [], playing = false;
+    let queue = [], playing = false, currentSpeed = 1.2;
 
-    // --- 1. ĐỒNG HỒ ---
+    // --- 1. ĐỒNG HỒ & LỊCH ---
     function updateClock() {
         const now = new Date();
         document.getElementById('clock-time').innerText = now.toLocaleTimeString('vi-VN');
@@ -96,33 +96,23 @@
     }
     setInterval(updateClock, 1000);
 
-    // --- 2. HÀM TẠO AUDIO DỰ PHÒNG ---
-    function getTTSUrl(text) {
-        // Lọc spam sơ bộ trước khi đọc
-        let clean = text.replace(/([\uD800-\uDBFF][\uDC00-\uDFFF]){2,}/g, '$1'); 
-        return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(clean)}&tl=vi&client=tw-ob`;
+    function changeSpeed(v) {
+        document.getElementById('speed-val').innerText = v + "x";
+        currentSpeed = parseFloat(v);
     }
 
-    // --- 3. KIỂM TRA BOT ĐÁP ---
-    function checkSmartBot(text) {
-        if (!document.getElementById('botToggle').checked) return null;
-        const low = text.toLowerCase();
-        const now = new Date();
-        const diff = Math.floor((now - new Date(2026,1,17)) / 86400000);
-        let lDay = (diff % 30) + 1, lMonth = Math.floor(diff/30) + 1;
-        
-        if (low.includes("mấy giờ")) return `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.`;
-        if (low.includes("âm lịch") || low.includes("ngày âm")) return `Hôm nay là mùng ${lDay} tháng ${lMonth} âm lịch.`;
-        if (low.includes("ngày mấy") || low.includes("thứ mấy")) {
-            const thu = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
-            return `Hôm nay là ${thu[now.getDay()]}, ngày ${now.getDate()} tháng ${now.getUTCMonth()+1}.`;
-        }
-        return null;
+    // --- 2. HÀM CHỐNG SPAM ---
+    function filterSpam(text) {
+        if(!text) return "";
+        let clean = text.replace(/([\uD800-\uDBFF][\uDC00-\uDFFF]){2,}/g, '$1'); // Giảm icon lặp
+        const words = clean.split(' ');
+        const filteredWords = words.filter((word, index) => word !== words[index - 1]); // Giảm từ lặp
+        return filteredWords.join(' ').substring(0, 80);
     }
 
-    // --- 4. LUỒNG XỬ LÝ CHÍNH ---
+    // --- 3. XỬ LÝ CHÍNH ---
     socket.on('audio-data', d => {
-        // LUÔN HIỆN NHẬT KÝ
+        // Hiện nhật ký
         const chat = document.getElementById('chat');
         const div = document.createElement('div');
         div.className = 'msg';
@@ -132,32 +122,33 @@
 
         if (!document.getElementById('masterToggle').checked) return;
 
-        // ƯU TIÊN 1: BOT ĐÁP
-        const botRep = checkSmartBot(d.comment);
-        if (botRep) {
-            queue.push(getTTSUrl(botRep));
-        } 
-        // ƯU TIÊN 2: ĐỌC COMMENT THEO NÚT BẬT/TẮT
-        else {
+        // BOT ĐÁP THÔNG MINH (Ngày giờ)
+        const low = d.comment.toLowerCase();
+        if (document.getElementById('botToggle').checked && (low.includes("mấy giờ") || low.includes("ngày âm") || low.includes("âm lịch"))) {
+            const { lDay, lMonth, now } = updateClock();
+            let rep = low.includes("mấy giờ") ? `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.` : `Hôm nay là mùng ${lDay} tháng ${lMonth} âm lịch.`;
+            const botUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(rep)}&tl=vi&client=tw-ob`;
+            queue.push(botUrl);
+        } else {
+            // ĐỌC BÌNH THƯỜNG
             let shouldRead = false;
             if (d.type === 'welcome' && document.getElementById('welcomeToggle').checked) shouldRead = true;
             else if (d.type === 'gift' && document.getElementById('giftToggle').checked) shouldRead = true;
             else if (d.type === 'bot' && document.getElementById('botToggle').checked) shouldRead = true;
-            else if (!d.type) shouldRead = true; // Trường hợp không phân loại (chat thường)
+            else if (!d.type) shouldRead = true;
 
             if (shouldRead) {
-                // Nếu server có audio thì lấy, không thì tự tạo audio từ comment
-                const audioUrl = d.audio ? d.audio : getTTSUrl(`${d.user} nói: ${d.comment}`);
+                // Nếu server không có audio, tự tạo audio đã qua lọc spam
+                const audioUrl = d.audio ? d.audio : `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(filterSpam(d.comment))}&tl=vi&client=tw-ob`;
                 queue.push(audioUrl);
             }
         }
-        
         if(!playing) play();
     });
 
     socket.on('linkMicArmies', () => {
         if (document.getElementById('pkToggle').checked) {
-            queue.push(getTTSUrl("20 giây cuối thả bông lấy găng Bèo ơi"));
+            queue.push(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent("20 giây cuối thả bông lấy găng Bèo ơi")}&tl=vi&client=tw-ob`);
             if(!playing) play();
         }
     });
@@ -166,6 +157,7 @@
         if(!queue.length || !document.getElementById('masterToggle').checked){ playing=false; return; }
         playing = true;
         const a = new Audio(queue.shift());
+        a.playbackRate = currentSpeed; // Áp dụng tốc độ đọc
         a.onended = () => { playing = false; play(); };
         a.play().catch(() => { playing = false; play(); });
     }
@@ -174,6 +166,7 @@
         const u = document.getElementById('user').value.trim();
         if(!u) return;
         socket.emit('set-username', u);
+        if ('wakeLock' in navigator) navigator.wakeLock.request('screen');
     }
 
     socket.on('status', m => {
