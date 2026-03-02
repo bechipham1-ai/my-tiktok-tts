@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bèo Control 🌸 Bản Hoàn Thiện Cuối Cùng</title>
+    <title>Bèo Control 🌸 Fix Triệt Để</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
@@ -56,7 +56,7 @@
     <div class="left-side">
         <div class="clock-box">
             <div id="clock-time">00:00:00</div>
-            <div id="clock-date">Đang tải dữ liệu...</div>
+            <div id="clock-date">Đang tải...</div>
             <div class="brand">Bèo Google 🌸</div>
         </div>
         <div class="control-panel">
@@ -65,13 +65,7 @@
                     <input type="text" id="user" placeholder="Nhập ID TikTok...">
                     <button class="btn-conn" onclick="start()">KẾT NỐI</button>
                 </div>
-                <div id="stt-container"><span id="stt-icon">✨</span> <span id="stt-text">Hệ thống sẵn sàng</span></div>
-            </div>
-            <div class="box-conn" style="padding: 10px;">
-                <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: var(--primary); margin-bottom: 5px;">
-                    <span>TỐC ĐỘ ĐỌC</span><span id="speed-val">1.2x</span>
-                </div>
-                <input type="range" id="speed-range" min="0.5" max="2.0" step="0.1" value="1.2" oninput="changeSpeed(this.value)" style="width: 100%;">
+                <div id="stt-container"><span id="stt-icon">✨</span> <span id="stt-text">Sẵn sàng</span></div>
             </div>
             <div class="sw-list">
                 <div class="sw-item master"><span>TẮT HỆ THỐNG</span><label class="switch master"><input type="checkbox" id="masterToggle" checked><span class="slider"></span></label></div>
@@ -90,84 +84,40 @@
 
 <script>
     const socket = io();
-    let queue = [], playing = false, currentSpeed = 1.2;
+    let queue = [], playing = false;
 
-    // --- 1. ĐỒNG HỒ & LỊCH ÂM CHUẨN ---
-    function getLunarDate() {
-        const now = new Date();
-        const tet2026 = new Date(2026, 1, 17);
-        const diffDays = Math.floor((now - tet2026) / (24 * 60 * 60 * 1000));
-        let lMonth = 1; let lDay = diffDays + 1;
-        if (lDay > 30) { lDay -= 30; lMonth = 2; }
-        return { d: lDay, m: lMonth };
-    }
-
+    // --- 1. ĐỒNG HỒ & NGÀY ÂM ---
     function updateClock() {
         const now = new Date();
         document.getElementById('clock-time').innerText = now.toLocaleTimeString('vi-VN');
-        const d = now.getDate(), m = now.getMonth() + 1, y = now.getFullYear();
-        const lunar = getLunarDate();
-        document.getElementById('clock-date').innerText = `DL: ${d}/${m}/${y} - ÂL: ${lunar.d}/${lunar.m}`;
+        // Tính ngày âm 2026 (17/2/2026 dương = 1/1 âm)
+        const tet = new Date(2026, 1, 17);
+        const diff = Math.floor((now - tet) / 86400000);
+        let lDay = diff + 1, lMonth = 1;
+        if (lDay > 30) { lDay -= 30; lMonth = 2; }
+        document.getElementById('clock-date').innerText = `DL: ${now.getDate()}/${now.getMonth()+1} - ÂL: ${lDay}/${lMonth}`;
+        return { lDay, lMonth, now };
     }
-    setInterval(updateClock, 1000); updateClock();
+    setInterval(updateClock, 1000);
 
-    // --- 2. HÀM CHECK TỪ KHÓA THÔNG MINH ---
+    // --- 2. HỎI ĐÁP THÔNG MINH ---
     function checkSmartBot(text) {
         if (!document.getElementById('botToggle').checked) return null;
         const low = text.toLowerCase();
-        const now = new Date();
-        const lunar = getLunarDate();
-
-        if (low.includes("mấy giờ") || low.includes("giờ rồi")) return `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút Bèo ơi.`;
-        if (low.includes("âm lịch") || low.includes("ngày âm") || low.includes("âm bao nhiêu")) return `Hôm nay là ngày mùng ${lunar.d} tháng ${lunar.m} âm lịch nha.`;
-        if (low.includes("ngày mấy") || low.includes("hôm nay ngày") || low.includes("thứ mấy")) {
+        const { lDay, lMonth, now } = updateClock();
+        
+        if (low.includes("mấy giờ") || low.includes("giờ rồi")) return `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.`;
+        if (low.includes("âm lịch") || low.includes("ngày âm") || low.includes("âm bao nhiêu")) return `Hôm nay là mùng ${lDay} tháng ${lMonth} âm lịch Bèo ơi.`;
+        if (low.includes("ngày mấy") || low.includes("thứ mấy")) {
             const thu = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
-            return `Hôm nay là ${thu[now.getDay()]}, ngày ${now.getDate()} tháng ${now.getMonth() + 1} dương lịch.`;
+            return `Hôm nay là ${thu[now.getDay()]}, ngày ${now.getDate()} tháng ${now.getUTCMonth()+1}.`;
         }
         return null;
     }
 
-    async function speakText(text) {
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`;
-        queue.push(url);
-        if(!playing) play();
-    }
-
-    function changeSpeed(v) {
-        document.getElementById('speed-val').innerText = v + "x";
-        currentSpeed = parseFloat(v);
-    }
-
-    async function start() {
-        const u = document.getElementById('user').value.trim();
-        if(!u) return;
-        document.getElementById('stt-text').innerText = "Đang kết nối...";
-        socket.emit('set-username', u);
-    }
-
-    socket.on('status', m => {
-        const sttBox = document.getElementById('stt-container');
-        if(m.includes('✅')) {
-            document.getElementById('stt-icon').innerText = "✅";
-            document.getElementById('stt-text').innerText = `Kết nối thành công`;
-            sttBox.className = "stt-success";
-            speakText("Hệ thống của Bèo đã sẵn sàng rồi nha");
-        } else {
-            document.getElementById('stt-icon').innerText = "❌";
-            document.getElementById('stt-text').innerText = "Lỗi kết nối";
-            sttBox.className = "stt-error";
-        }
-    });
-
-    socket.on('linkMicArmies', () => {
-        if (document.getElementById('pkToggle').checked) {
-            speakText("20 giây cuối thả bông lấy găng Bèo ơi");
-        }
-    });
-
-    // --- 3. LUỒNG XỬ LÝ CHÍNH - KHÔNG BỎ SÓT ---
+    // --- 3. XỬ LÝ CHÍNH ---
     socket.on('audio-data', d => {
-        // LUÔN HIỆN NHẬT KÝ (Bất kể Master On/Off)
+        // LUÔN HIỆN CHAT
         const chat = document.getElementById('chat');
         const div = document.createElement('div');
         div.className = 'msg';
@@ -175,36 +125,56 @@
         chat.prepend(div);
         if(chat.childNodes.length > 50) chat.removeChild(chat.lastChild);
 
-        // NẾU TẮT MASTER THÌ KHÔNG ĐỌC GÌ CẢ
+        // NẾU MASTER TẮT THÌ DỪNG
         if (!document.getElementById('masterToggle').checked) return;
 
-        // KIỂM TRA HỎI ĐÁP THÔNG MINH TRƯỚC
+        // KIỂM TRA BOT ĐÁP (HỎI GIỜ/NGÀY)
         const botRep = checkSmartBot(d.comment);
         if (botRep) {
-            speakText(botRep);
-            return; // Đã đáp thì không đọc comment gốc nữa
-        }
+            const botUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(botRep)}&tl=vi&client=tw-ob`;
+            queue.push(botUrl);
+        } else {
+            // ĐỌC CMT BÌNH THƯỜNG THEO SWITCH
+            let canPlay = false;
+            if (d.type === 'welcome' && document.getElementById('welcomeToggle').checked) canPlay = true;
+            else if (d.type === 'gift' && document.getElementById('giftToggle').checked) canPlay = true;
+            else if (d.type === 'bot' && document.getElementById('botToggle').checked) canPlay = true;
+            else if (!d.type) canPlay = true; // NẾU KHÔNG CÓ TYPE THÌ CỨ ĐỌC (QUAN TRỌNG)
 
-        // ĐỌC THEO CÁC NÚT SWITCH (Chào, Quà, Bot)
-        if (d.type === 'welcome' && document.getElementById('welcomeToggle').checked) {
-            queue.push(d.audio);
-        } else if (d.type === 'gift' && document.getElementById('giftToggle').checked) {
-            queue.push(d.audio);
-        } else if (d.type === 'bot' && document.getElementById('botToggle').checked) {
-            queue.push(d.audio);
+            if (canPlay && d.audio) queue.push(d.audio);
         }
         
         if(!playing) play();
+    });
+
+    socket.on('linkMicArmies', () => {
+        if (document.getElementById('pkToggle').checked) {
+            const pkUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent("20 giây cuối thả bông lấy găng Bèo ơi")}&tl=vi&client=tw-ob`;
+            queue.push(pkUrl);
+            if(!playing) play();
+        }
     });
 
     function play() {
         if(!queue.length || !document.getElementById('masterToggle').checked){ playing=false; return; }
         playing = true;
         const a = new Audio(queue.shift());
-        a.playbackRate = currentSpeed;
-        a.onended = () => setTimeout(play, 100);
-        a.play().catch(() => play());
+        a.onended = () => { playing = false; play(); };
+        a.play().catch(() => { playing = false; play(); });
     }
+
+    async function start() {
+        const u = document.getElementById('user').value.trim();
+        if(!u) return;
+        socket.emit('set-username', u);
+        if ('wakeLock' in navigator) navigator.wakeLock.request('screen');
+    }
+
+    socket.on('status', m => {
+        const stt = document.getElementById('stt-container');
+        stt.className = m.includes('✅') ? "stt-success" : "stt-error";
+        document.getElementById('stt-text').innerText = m.includes('✅') ? "Đã kết nối" : "Lỗi kết nối";
+    });
 </script>
 </body>
 </html>
