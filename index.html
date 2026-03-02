@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bèo Control 🌸 Smart Bot Fix</title>
+    <title>Bèo Control 🌸 Bản Hoàn Thiện Cuối Cùng</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
@@ -59,26 +59,20 @@
             <div id="clock-date">Đang tải dữ liệu...</div>
             <div class="brand">Bèo Google 🌸</div>
         </div>
-
         <div class="control-panel">
             <div class="box-conn">
                 <div class="conn-row">
                     <input type="text" id="user" placeholder="Nhập ID TikTok...">
                     <button class="btn-conn" onclick="start()">KẾT NỐI</button>
                 </div>
-                <div id="stt-container">
-                    <span id="stt-icon">✨</span>
-                    <span id="stt-text">Hệ thống sẵn sàng</span>
-                </div>
+                <div id="stt-container"><span id="stt-icon">✨</span> <span id="stt-text">Hệ thống sẵn sàng</span></div>
             </div>
-
             <div class="box-conn" style="padding: 10px;">
                 <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: var(--primary); margin-bottom: 5px;">
                     <span>TỐC ĐỘ ĐỌC</span><span id="speed-val">1.2x</span>
                 </div>
                 <input type="range" id="speed-range" min="0.5" max="2.0" step="0.1" value="1.2" oninput="changeSpeed(this.value)" style="width: 100%;">
             </div>
-
             <div class="sw-list">
                 <div class="sw-item master"><span>TẮT HỆ THỐNG</span><label class="switch master"><input type="checkbox" id="masterToggle" checked><span class="slider"></span></label></div>
                 <div class="sw-item pk"><span>NHẮC PK 20S</span><label class="switch pk"><input type="checkbox" id="pkToggle" checked><span class="slider"></span></label></div>
@@ -98,21 +92,13 @@
     const socket = io();
     let queue = [], playing = false, currentSpeed = 1.2;
 
-    // --- 1. ĐỒNG HỒ & LỊCH ÂM 2026 ---
+    // --- 1. ĐỒNG HỒ & LỊCH ÂM CHUẨN ---
     function getLunarDate() {
         const now = new Date();
-        // Thuật toán tính lịch âm rút gọn cho năm 2026
-        // 17/02/2026 Dương là 01/01/2026 Âm (Tết Bính Ngọ)
         const tet2026 = new Date(2026, 1, 17);
         const diffDays = Math.floor((now - tet2026) / (24 * 60 * 60 * 1000));
-        
-        if (diffDays < 0) return "Chưa cập nhật";
-        
-        // Tính toán tương đối (Tháng 1 có 30 ngày)
-        let lMonth = 1;
-        let lDay = diffDays + 1;
+        let lMonth = 1; let lDay = diffDays + 1;
         if (lDay > 30) { lDay -= 30; lMonth = 2; }
-        
         return { d: lDay, m: lMonth };
     }
 
@@ -125,19 +111,15 @@
     }
     setInterval(updateClock, 1000); updateClock();
 
-    // --- 2. HÀM CHECK TỪ KHÓA (NGOÀI CÙNG) ---
+    // --- 2. HÀM CHECK TỪ KHÓA THÔNG MINH ---
     function checkSmartBot(text) {
         if (!document.getElementById('botToggle').checked) return null;
         const low = text.toLowerCase();
         const now = new Date();
         const lunar = getLunarDate();
 
-        if (low.includes("mấy giờ") || low.includes("giờ rồi")) {
-            return `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút Bèo ơi.`;
-        }
-        if (low.includes("âm lịch") || low.includes("ngày âm") || low.includes("âm bao nhiêu")) {
-            return `Hôm nay là ngày mùng ${lunar.d} tháng ${lunar.m} âm lịch nha.`;
-        }
+        if (low.includes("mấy giờ") || low.includes("giờ rồi")) return `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút Bèo ơi.`;
+        if (low.includes("âm lịch") || low.includes("ngày âm") || low.includes("âm bao nhiêu")) return `Hôm nay là ngày mùng ${lunar.d} tháng ${lunar.m} âm lịch nha.`;
         if (low.includes("ngày mấy") || low.includes("hôm nay ngày") || low.includes("thứ mấy")) {
             const thu = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
             return `Hôm nay là ${thu[now.getDay()]}, ngày ${now.getDate()} tháng ${now.getMonth() + 1} dương lịch.`;
@@ -145,11 +127,10 @@
         return null;
     }
 
-    async function speakSystem(text) {
+    async function speakText(text) {
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`;
-        const audio = new Audio(url);
-        audio.playbackRate = currentSpeed;
-        audio.play().catch(() => {});
+        queue.push(url);
+        if(!playing) play();
     }
 
     function changeSpeed(v) {
@@ -160,7 +141,6 @@
     async function start() {
         const u = document.getElementById('user').value.trim();
         if(!u) return;
-        document.getElementById('stt-icon').innerText = "⏳";
         document.getElementById('stt-text').innerText = "Đang kết nối...";
         socket.emit('set-username', u);
     }
@@ -171,7 +151,7 @@
             document.getElementById('stt-icon').innerText = "✅";
             document.getElementById('stt-text').innerText = `Kết nối thành công`;
             sttBox.className = "stt-success";
-            speakSystem("Đã kết nối, bắt đầu đọc comment nha Bèo");
+            speakText("Hệ thống của Bèo đã sẵn sàng rồi nha");
         } else {
             document.getElementById('stt-icon').innerText = "❌";
             document.getElementById('stt-text').innerText = "Lỗi kết nối";
@@ -181,14 +161,13 @@
 
     socket.on('linkMicArmies', () => {
         if (document.getElementById('pkToggle').checked) {
-            speakSystem("20 giây cuối thả bông lấy găng Bèo ơi");
+            speakText("20 giây cuối thả bông lấy găng Bèo ơi");
         }
     });
 
+    // --- 3. LUỒNG XỬ LÝ CHÍNH - KHÔNG BỎ SÓT ---
     socket.on('audio-data', d => {
-        if (!document.getElementById('masterToggle').checked) return;
-
-        // Nhật ký chat
+        // LUÔN HIỆN NHẬT KÝ (Bất kể Master On/Off)
         const chat = document.getElementById('chat');
         const div = document.createElement('div');
         div.className = 'msg';
@@ -196,22 +175,26 @@
         chat.prepend(div);
         if(chat.childNodes.length > 50) chat.removeChild(chat.lastChild);
 
-        // 1. ƯU TIÊN KIỂM TRA HỎI ĐÁP THÔNG MINH
+        // NẾU TẮT MASTER THÌ KHÔNG ĐỌC GÌ CẢ
+        if (!document.getElementById('masterToggle').checked) return;
+
+        // KIỂM TRA HỎI ĐÁP THÔNG MINH TRƯỚC
         const botRep = checkSmartBot(d.comment);
         if (botRep) {
-            const botUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(botRep)}&tl=vi&client=tw-ob`;
-            queue.push(botUrl);
-            if(!playing) play();
-            return; // Đã trả lời thì không đọc lại comment gốc
+            speakText(botRep);
+            return; // Đã đáp thì không đọc comment gốc nữa
         }
 
-        // 2. NẾU KHÔNG PHẢI HỎI GIỜ THÌ ĐỌC BÌNH THƯỜNG THEO SWITCH
-        if ((d.type==='welcome'&&document.getElementById('welcomeToggle').checked) ||
-            (d.type==='gift'&&document.getElementById('giftToggle').checked) ||
-            (d.type==='bot'&&document.getElementById('botToggle').checked)) {
+        // ĐỌC THEO CÁC NÚT SWITCH (Chào, Quà, Bot)
+        if (d.type === 'welcome' && document.getElementById('welcomeToggle').checked) {
             queue.push(d.audio);
-            if(!playing) play();
+        } else if (d.type === 'gift' && document.getElementById('giftToggle').checked) {
+            queue.push(d.audio);
+        } else if (d.type === 'bot' && document.getElementById('botToggle').checked) {
+            queue.push(d.audio);
         }
+        
+        if(!playing) play();
     });
 
     function play() {
