@@ -15,10 +15,17 @@
         .left-side { width: 330px; display: flex; flex-direction: column; border-right: 2px solid var(--border); background: #fff; flex-shrink: 0; }
         .right-side { flex: 1; display: flex; flex-direction: column; padding: 15px; background: var(--bg); overflow: hidden; }
 
-        .clock-box { background: linear-gradient(135deg, #ff85a2, #ffb3c6); color: white; padding: 12px; text-align: center; border-radius: 0 0 20px 20px; box-shadow: 0 4px 10px rgba(255,133,162,0.2); }
-        #clock-time { font-size: 30px; font-weight: 700; line-height: 1; }
-        #clock-date { font-size: 11px; opacity: 0.9; margin: 3px 0; }
-        .brand { font-size: 13px; font-weight: 700; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 3px; }
+        /* Cấu trúc đồng hồ và follow ngang hàng */
+        .header-box { background: linear-gradient(135deg, #ff85a2, #ffb3c6); color: white; padding: 12px; border-radius: 0 0 20px 20px; box-shadow: 0 4px 10px rgba(255,133,162,0.2); display: flex; justify-content: space-between; align-items: center; }
+        .clock-section { text-align: left; }
+        #clock-time { font-size: 28px; font-weight: 700; line-height: 1; }
+        #clock-date { font-size: 10px; opacity: 0.9; margin-top: 2px; }
+        
+        .follow-box { background: rgba(255, 255, 255, 0.2); padding: 5px 12px; border-radius: 12px; text-align: right; border: 1px solid rgba(255,255,255,0.3); }
+        .follow-label { font-size: 9px; font-weight: 700; text-transform: uppercase; display: block; }
+        #follow-count { font-size: 20px; font-weight: 700; }
+
+        .brand { font-size: 11px; font-weight: 700; text-align: center; background: rgba(0,0,0,0.05); padding: 2px 0; }
 
         .control-panel { padding: 12px; display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; }
         .box-conn { background: #fff; border: 2px solid var(--border); padding: 12px; border-radius: 18px; display: flex; flex-direction: column; gap: 8px; }
@@ -62,11 +69,17 @@
 
 <div class="app-container">
     <div class="left-side">
-        <div class="clock-box">
-            <div id="clock-time">00:00:00</div>
-            <div id="clock-date">Đang tải...</div>
-            <div class="brand">Bèo Google 🌸</div>
+        <div class="header-box">
+            <div class="clock-section">
+                <div id="clock-time">00:00:00</div>
+                <div id="clock-date">Đang tải...</div>
+            </div>
+            <div class="follow-box">
+                <span class="follow-label">Followers</span>
+                <span id="follow-count">0</span>
+            </div>
         </div>
+        <div class="brand">Bèo Google Assistant 🌸</div>
 
         <div class="control-panel">
             <div class="box-conn">
@@ -106,6 +119,7 @@
 <script>
     const socket = io();
     let queue = [], playing = false, currentSpeed = 1.2;
+    let totalFollows = 0; // Biến lưu trữ số follow
 
     function updateClock() {
         const now = new Date();
@@ -156,6 +170,14 @@
         }
     });
 
+    // Lắng nghe sự kiện Follow từ Server
+    socket.on('social', (data) => {
+        if (data.displayType === 'social' && data.label.includes('followed')) {
+            totalFollows++;
+            document.getElementById('follow-count').innerText = totalFollows;
+        }
+    });
+
     socket.on('linkMicArmies', () => {
         if (document.getElementById('pkToggle').checked) {
             speakSystem("20 giây cuối thả bông lấy găng Bèo ơi");
@@ -165,7 +187,6 @@
     socket.on('audio-data', d => {
         if (!document.getElementById('masterToggle').checked) return;
 
-        // HIỂN THỊ NHẬT KÝ: Giữ nguyên Tên (d.user) và Comment (d.comment) từ Server gửi về
         const chat = document.getElementById('chat');
         const div = document.createElement('div');
         div.className = 'msg';
@@ -173,14 +194,12 @@
         chat.prepend(div);
         if(chat.childNodes.length > 50) chat.removeChild(chat.lastChild);
 
-        // LOGIC BOT ĐÁP NGÀY GIỜ
         const low = d.comment.toLowerCase();
         if (document.getElementById('botToggle').checked && (low.includes("mấy giờ") || low.includes("ngày âm") || low.includes("âm lịch"))) {
             const now = new Date();
             let rep = low.includes("mấy giờ") ? `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.` : `Hôm nay là ngày ${document.getElementById('clock-date').innerText.split('ÂL: ')[1]} âm lịch nha.`;
             queue.push(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(rep)}&tl=vi&client=tw-ob`);
         } else {
-            // ĐỌC THEO LUỒNG AUDIO GỐC
             if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
             if (d.type === 'gift' && !document.getElementById('giftToggle').checked) return;
             if (d.type === 'bot' && !document.getElementById('botToggle').checked) return;
