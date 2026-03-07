@@ -2,57 +2,38 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Bèo Control 🌸 PK Master V3</title>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <title>Bèo Control 🌸 PK Master FIX</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
-        :root { --primary: #ff85a2; --bg: #fff5f7; --text: #5d4037; }
-        body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; color: var(--text); }
-        .app-container { display: flex; height: 100vh; }
-        .left-side { width: 330px; border-right: 2px solid #f8bbd0; background: #fff; padding: 15px; }
-        .right-side { flex: 1; padding: 15px; overflow-y: auto; }
-        .msg { padding: 8px; background: #fff; border-left: 4px solid var(--primary); margin-bottom: 5px; font-size: 13px; }
+        :root { --primary: #ff85a2; --bg: #fff5f7; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 10px; }
+        .control-panel { background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #f8bbd0; }
+        .msg { padding: 5px; border-bottom: 1px solid #eee; font-size: 13px; }
     </style>
 </head>
 <body>
-<div class="app-container">
-    <div class="left-side">
-        <h3>Bèo Control 🌸</h3>
-        <input type="text" id="user" placeholder="Nhập ID TikTok...">
-        <button onclick="start()">KẾT NỐI</button>
-        <div id="stt-text">Trạng thái: Chưa kết nối</div>
-        <hr>
-        <div id="clock-date">Đang tải...</div>
-        <div>Follows: <span id="follow-count">0</span></div>
-        <hr>
-        <label>Tốc độ: <input type="range" min="0.5" max="2.0" step="0.1" value="1.2" oninput="changeSpeed(this.value)"></label>
-    </div>
-    <div class="right-side" id="chat"></div>
+
+<div class="control-panel">
+    <h3>Bèo Control 🌸</h3>
+    <input type="text" id="user" placeholder="Nhập ID TikTok...">
+    <button onclick="connect()">KẾT NỐI</button>
+    <div id="stt-text">Trạng thái: Chưa kết nối</div>
+    <hr>
+    <div>ÂL: <span id="al-date">...</span> | Follows: <span id="follow-count">0</span></div>
+    <label>Tốc độ: <input type="range" min="0.5" max="2.0" step="0.1" value="1.2" oninput="changeSpeed(this.value)"></label>
 </div>
+<div id="chat"></div>
 
 <script>
-    const socket = io();
+    // Kiểm tra xem io đã tải chưa
+    if (typeof io === 'undefined') {
+        document.getElementById('stt-text').innerText = "Lỗi: Chưa tải được thư viện Socket!";
+    }
+
+    const socket = io(); // Kết nối tới server của Bèo
     let queue = [], playing = false, currentSpeed = 1.2, totalFollows = 0;
 
-    // --- CẤU HÌNH ÂM THANH BẮT BUỘC ---
-    function play() {
-        if (queue.length === 0) { playing = false; return; }
-        playing = true;
-        const audio = new Audio(queue.shift());
-        audio.playbackRate = currentSpeed;
-        audio.onended = () => { setTimeout(play, 300); };
-        audio.play().catch(e => { console.log("Trình duyệt chặn, bấm vào trang để kích hoạt âm thanh"); play(); });
-    }
-
-    async function speakSystem(text) {
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`;
-        queue.push(url);
-        if (!playing) play();
-    }
-
-    function changeSpeed(v) { currentSpeed = parseFloat(v); }
-
-    function start() {
+    function connect() {
         const u = document.getElementById('user').value.trim();
         if(!u) return;
         socket.emit('set-username', u);
@@ -62,51 +43,47 @@
     socket.on('status', m => {
         if(m.includes('✅')) {
             document.getElementById('stt-text').innerText = "Đã kết nối thành công";
-            speakSystem("Hệ thống đã sẵn sàng rồi Bèo ơi");
+            speak("Hệ thống đã sẵn sàng");
         }
     });
 
-    socket.on('linkMicArmies', () => {
-        speakSystem("20 giây cuối lên bông bèo ơi");
-    });
-
-    // Dự phòng sự kiện PK
-    socket.on('match', () => {
-        speakSystem("20 giây cuối lên bông bèo ơi");
-    });
+    // Sự kiện PK 20s
+    socket.on('linkMicArmies', () => speak("20 giây cuối lên bông bèo ơi"));
+    socket.on('match', () => speak("20 giây cuối lên bông bèo ơi"));
 
     socket.on('audio-data', d => {
-        const cmt = d.comment ? d.comment.toLowerCase() : "";
-        
-        // Lọc Spam đơn giản
-        if (cmt.length < 2) return;
-
-        // Đếm Follow
-        if (cmt.includes('đã follow') || cmt.includes('đã theo dõi')) {
+        if (d.comment && (d.comment.includes('đã follow') || d.comment.includes('đã theo dõi'))) {
             totalFollows++;
             document.getElementById('follow-count').innerText = totalFollows;
         }
-
-        // Hiện chat
+        
         const div = document.createElement('div');
         div.className = 'msg';
         div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
         document.getElementById('chat').prepend(div);
 
-        // Đẩy audio vào queue
-        if (d.audio) queue.push(d.audio);
-        if (!playing) play();
+        if (d.audio) {
+            queue.push(d.audio);
+            if (!playing) play();
+        }
     });
 
-    // Đồng hồ
-    function updateClock() {
-        const now = new Date();
-        const tet2026 = new Date(2026, 1, 17);
-        const diff = Math.floor((now - tet2026) / 86400000);
-        let lDay = (diff % 30) + 1; let lMonth = (Math.floor(diff / 30) % 12) + 1;
-        document.getElementById('clock-date').innerText = `ÂL: ${lDay}/${lMonth}`;
+    function play() {
+        if (queue.length === 0) { playing = false; return; }
+        playing = true;
+        const audio = new Audio(queue.shift());
+        audio.playbackRate = currentSpeed;
+        audio.onended = () => setTimeout(play, 300);
+        audio.play().catch(() => play());
     }
-    setInterval(updateClock, 1000);
+
+    function speak(text) {
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`;
+        queue.push(url);
+        if (!playing) play();
+    }
+
+    function changeSpeed(v) { currentSpeed = parseFloat(v); }
 </script>
 </body>
 </html>
