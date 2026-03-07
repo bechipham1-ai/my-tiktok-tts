@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bèo Control 🌸 PK Master</title>
+    <title>Bèo Control 🌸 PK Master Full</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
@@ -26,13 +26,16 @@
         .control-panel { padding: 12px; display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; }
         .box-conn { background: #fff; border: 2px solid var(--border); padding: 12px; border-radius: 18px; display: flex; flex-direction: column; gap: 8px; }
         .conn-row { display: flex; gap: 5px; }
-        input[type="text"] { flex: 1; padding: 10px; border-radius: 10px; border: 2px solid var(--border); outline: none; }
-        .btn-conn { background: var(--primary); color: white; border: none; padding: 0 15px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+        input[type="text"] { flex: 1; padding: 10px; border-radius: 10px; border: 2px solid var(--border); outline: none; font-size: 14px; border: 2px solid var(--border); }
+        .btn-conn { background: var(--primary); color: white; border: none; padding: 0 15px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 13px; }
+
+        #stt-container { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 8px; border-radius: 10px; background: #fff8f9; border: 1px dashed var(--border); min-height: 35px; }
+        .stt-success { color: var(--success); border-color: var(--success); background: #f1f8f1; }
+        .stt-error { color: var(--error); border-color: var(--error); background: #fff1f1; }
 
         .sw-list { display: flex; flex-direction: column; gap: 6px; }
         .sw-item { background: white; border: 1px solid var(--border); padding: 10px 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; }
         
-        /* Switch CSS */
         .switch { position: relative; width: 34px; height: 18px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; transition: .4s; border-radius: 20px; }
@@ -40,14 +43,15 @@
         input:checked + .slider { background: var(--primary); }
         input:checked + .slider:before { transform: translateX(16px); }
 
-        .journal-header { background: white; padding: 10px 15px; border-radius: 15px 15px 0 0; border: 2px solid var(--border); font-weight: 700; color: var(--primary); }
+        .journal-header { background: white; padding: 10px 15px; border-radius: 15px 15px 0 0; border: 2px solid var(--border); font-weight: 700; color: var(--primary); font-size: 13px; }
         .journal-content { flex: 1; background: white; border: 2px solid var(--border); border-radius: 0 0 15px 15px; overflow-y: auto; padding: 10px; }
-        .msg { padding: 8px 12px; background: var(--bg); border-left: 4px solid var(--primary); border-radius: 8px; margin-bottom: 6px; font-size: 13px; }
+        .msg { padding: 8px 12px; background: var(--bg); border-left: 4px solid var(--primary); border-radius: 8px; margin-bottom: 6px; font-size: 13px; word-break: break-word; }
 
         @media (max-width: 768px) {
             .app-container { flex-direction: column; height: auto; }
-            .left-side { width: 100%; }
-            .right-side { height: 400px; }
+            .left-side { width: 100%; border-right: none; }
+            .right-side { height: 450px; }
+            .sw-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         }
     </style>
 </head>
@@ -72,6 +76,10 @@
                     <input type="text" id="user" placeholder="Nhập ID TikTok...">
                     <button class="btn-conn" onclick="start()">KẾT NỐI</button>
                 </div>
+                <div id="stt-container">
+                    <span id="stt-icon">✨</span>
+                    <span id="stt-text">Hệ thống sẵn sàng</span>
+                </div>
             </div>
 
             <div class="sw-list">
@@ -91,40 +99,96 @@
 </div>
 
 <script>
-    // Kiểm tra xem socket có tải được không
-    if (typeof io === 'undefined') {
-        alert("Lỗi: Không tải được thư viện kết nối. Bèo hãy kiểm tra lại mạng nhé!");
-    }
-    
     const socket = io();
-    let totalFollows = 0;
+    let queue = [], playing = false, totalFollows = 0;
 
+    // 1. CẬP NHẬT ĐỒNG HỒ
     function updateClock() {
         const now = new Date();
         document.getElementById('clock-time').innerText = now.toLocaleTimeString('vi-VN');
         const d = now.getDate(), m = now.getMonth() + 1, y = now.getFullYear();
-        document.getElementById('clock-date').innerText = `DL: ${d}/${m}/${y}`;
+        document.getElementById('clock-date').innerText = `Ngày ${d}/${m}/${y}`;
     }
     setInterval(updateClock, 1000); updateClock();
 
-    function start() {
-        const u = document.getElementById('user').value.trim();
-        if(u) socket.emit('set-username', u);
+    // 2. GIỌNG NÓI HỆ THỐNG
+    async function speakSystem(text) {
+        if (!document.getElementById('masterToggle').checked) return;
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`;
+        const audio = new Audio(url);
+        audio.play().catch(() => {});
     }
 
+    // 3. KẾT NỐI
+    async function start() {
+        const u = document.getElementById('user').value.trim();
+        if(!u) return;
+        document.getElementById('stt-icon').innerText = "⏳";
+        document.getElementById('stt-text').innerText = "Đang kết nối...";
+        if ('wakeLock' in navigator) await navigator.wakeLock.request('screen').catch(()=>{});
+        socket.emit('set-username', u);
+    }
+
+    socket.on('status', m => {
+        const sttBox = document.getElementById('stt-container');
+        if(m.includes('✅')) {
+            document.getElementById('stt-icon').innerText = "✅";
+            document.getElementById('stt-text').innerText = `Đã kết nối thành công`;
+            sttBox.className = "stt-success";
+            speakSystem("Hệ thống đã sẵn sàng rồi Bèo ơi");
+        } else {
+            document.getElementById('stt-icon').innerText = "❌";
+            document.getElementById('stt-text').innerText = "Lỗi kết nối rồi";
+            sttBox.className = "stt-error";
+        }
+    });
+
+    // 4. XỬ LÝ DỮ LIỆU & GIỌNG NÓI
     socket.on('audio-data', d => {
-        // Đếm follow ngay khi thấy chữ "đã follow" trong comment
+        if (!document.getElementById('masterToggle').checked) return;
+
+        // Cập nhật follow
         if (d.type === 'welcome' || (d.comment && d.comment.toLowerCase().includes('đã follow'))) {
             totalFollows++;
             document.getElementById('follow-count').innerText = totalFollows;
         }
 
+        // Hiện nhật ký
         const chat = document.getElementById('chat');
         const div = document.createElement('div');
         div.className = 'msg';
         div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
         chat.prepend(div);
+        if(chat.childNodes.length > 50) chat.removeChild(chat.lastChild);
+
+        // Xử lý bot đáp
+        const low = d.comment.toLowerCase();
+        if (document.getElementById('botToggle').checked && (low.includes("mấy giờ") || low.includes("ngày âm"))) {
+            const now = new Date();
+            let rep = low.includes("mấy giờ") ? `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.` : "Hôm nay là ngày âm lịch Bèo ơi.";
+            queue.push(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(rep)}&tl=vi&client=tw-ob`);
+        } else {
+            if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
+            if (d.type === 'gift' && !document.getElementById('giftToggle').checked) return;
+            if (d.audio) queue.push(d.audio);
+        }
+
+        if(!playing) play();
     });
+
+    socket.on('linkMicArmies', () => {
+        if (document.getElementById('pkToggle').checked) {
+            speakSystem("20 giây cuối thả bông lấy găng Bèo ơi");
+        }
+    });
+
+    function play() {
+        if(!queue.length || !document.getElementById('masterToggle').checked){ playing=false; return; }
+        playing = true;
+        const a = new Audio(queue.shift());
+        a.onended = () => setTimeout(play, 100);
+        a.play().catch(() => play());
+    }
 </script>
 </body>
 </html>
