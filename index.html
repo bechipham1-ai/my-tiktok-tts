@@ -20,7 +20,7 @@
         #clock-date { font-size: 10px; opacity: 0.9; margin-top: 2px; }
         
         .follow-box { background: rgba(255, 255, 255, 0.2); padding: 5px 12px; border-radius: 12px; text-align: right; border: 1px solid rgba(255,255,255,0.3); min-width: 80px; }
-        #follow-count { font-size: 22px; font-weight: 700; display: block; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        #follow-count { font-size: 20px; font-weight: 700; display: block; color: #fff; }
         .follow-label { font-size: 9px; font-weight: 700; text-transform: uppercase; }
 
         .control-panel { padding: 12px; display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; }
@@ -156,9 +156,8 @@
         }
     });
 
-    // CÁCH 1: Lắng nghe kênh social riêng (Dành cho một số bản server tách sự kiện)
     socket.on('social', (data) => {
-        if (data && data.displayType === 'social' && data.label && (data.label.includes('followed') || data.label.includes('theo dõi'))) {
+        if (data && (data.label && data.label.includes('followed') || data.displayType === 'follow')) {
             totalFollows++;
             document.getElementById('follow-count').innerText = totalFollows;
         }
@@ -166,37 +165,30 @@
 
     socket.on('audio-data', d => {
         if (!document.getElementById('masterToggle').checked) return;
-
-        // CÁCH 2: Soi trực tiếp trong nội dung (Dành cho bản server gộp chung)
         const cmtLower = d.comment ? d.comment.toLowerCase() : "";
         if (cmtLower.includes('đã follow') || cmtLower.includes('đã theo dõi')) {
             totalFollows++;
             document.getElementById('follow-count').innerText = totalFollows;
         }
-
         const chat = document.getElementById('chat');
         const div = document.createElement('div');
         div.className = 'msg';
         div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
         chat.prepend(div);
-
-        if (document.getElementById('botToggle').checked && (cmtLower.includes("mấy giờ") || cmtLower.includes("ngày âm") || cmtLower.includes("âm lịch"))) {
+        if (document.getElementById('botToggle').checked && (cmtLower.includes("mấy giờ") || cmtLower.includes("ngày âm"))) {
             const now = new Date();
-            let rep = cmtLower.includes("mấy giờ") ? `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.` : `Hôm nay là ngày ${document.getElementById('clock-date').innerText.split('ÂL: ')[1]} âm lịch nha.`;
+            let rep = cmtLower.includes("mấy giờ") ? `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.` : "Hôm nay là ngày âm lịch Bèo ơi.";
             queue.push(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(rep)}&tl=vi&client=tw-ob`);
         } else {
             if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
             if (d.type === 'gift' && !document.getElementById('giftToggle').checked) return;
             if (d.audio) queue.push(d.audio);
         }
-
         if(!playing) play();
     });
 
     socket.on('linkMicArmies', () => {
-        if (document.getElementById('pkToggle').checked) {
-            speakSystem("20 giây cuối thả bông lấy găng Bèo ơi");
-        }
+        if (document.getElementById('pkToggle').checked) speakSystem("20 giây cuối lên bông bèo ơi");
     });
 
     function play() {
