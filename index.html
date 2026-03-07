@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bèo Control 🌸 PK Master Full PRO</title>
+    <title>Bèo Control 🌸 PK Master Final</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
@@ -20,7 +20,7 @@
         #clock-date { font-size: 10px; opacity: 0.9; margin-top: 2px; }
         
         .follow-box { background: rgba(255, 255, 255, 0.2); padding: 5px 12px; border-radius: 12px; text-align: right; border: 1px solid rgba(255,255,255,0.3); min-width: 80px; }
-        #follow-count { font-size: 20px; font-weight: 700; display: block; }
+        #follow-count { font-size: 22px; font-weight: 700; display: block; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .follow-label { font-size: 9px; font-weight: 700; text-transform: uppercase; }
 
         .control-panel { padding: 12px; display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; }
@@ -139,7 +139,6 @@
         if(!u) return;
         document.getElementById('stt-icon').innerText = "⏳";
         document.getElementById('stt-text').innerText = "Đang kết nối...";
-        if ('wakeLock' in navigator) await navigator.wakeLock.request('screen').catch(()=>{});
         socket.emit('set-username', u);
     }
 
@@ -157,10 +156,18 @@
         }
     });
 
+    // CÁCH 1: Lắng nghe kênh social riêng (Dành cho một số bản server tách sự kiện)
+    socket.on('social', (data) => {
+        if (data && data.displayType === 'social' && data.label && (data.label.includes('followed') || data.label.includes('theo dõi'))) {
+            totalFollows++;
+            document.getElementById('follow-count').innerText = totalFollows;
+        }
+    });
+
     socket.on('audio-data', d => {
         if (!document.getElementById('masterToggle').checked) return;
 
-        // CHỈ ĐẾM KHI CÓ CHỮ "FOLLOW" HOẶC "THEO DÕI"
+        // CÁCH 2: Soi trực tiếp trong nội dung (Dành cho bản server gộp chung)
         const cmtLower = d.comment ? d.comment.toLowerCase() : "";
         if (cmtLower.includes('đã follow') || cmtLower.includes('đã theo dõi')) {
             totalFollows++;
