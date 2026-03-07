@@ -17,7 +17,7 @@
 
         .header-box { background: linear-gradient(135deg, #ff85a2, #ffb3c6); color: white; padding: 12px; border-radius: 0 0 20px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(255,133,162,0.2); }
         #clock-time { font-size: 28px; font-weight: 700; line-height: 1; }
-        #clock-date { font-size: 10px; opacity: 0.9; }
+        #clock-date { font-size: 10px; opacity: 0.9; margin-top: 2px; }
         
         .follow-box { background: rgba(255, 255, 255, 0.2); padding: 5px 12px; border-radius: 12px; text-align: right; border: 1px solid rgba(255,255,255,0.3); }
         #follow-count { font-size: 20px; font-weight: 700; display: block; }
@@ -62,7 +62,7 @@
         <div class="header-box">
             <div>
                 <div id="clock-time">00:00:00</div>
-                <div id="clock-date">Đang tải...</div>
+                <div id="clock-date">Đang tính...</div>
             </div>
             <div class="follow-box">
                 <span id="follow-count">0</span>
@@ -109,11 +109,20 @@
     const socket = io();
     let queue = [], playing = false, currentSpeed = 1.2, totalFollows = 0;
 
+    // KHÔI PHỤC HÀM TÍNH LỊCH ÂM CHUẨN CỦA BÈO
     function updateClock() {
         const now = new Date();
         document.getElementById('clock-time').innerText = now.toLocaleTimeString('vi-VN');
         const d = now.getDate(), m = now.getMonth() + 1, y = now.getFullYear();
-        document.getElementById('clock-date').innerText = `Ngày ${d}/${m}/${y}`;
+        
+        // Công thức tính ngày âm Bèo đang dùng
+        const tet2026 = new Date(2026, 1, 17);
+        const diff = Math.floor((now - tet2026) / 86400000);
+        let lDay = (diff % 30) + 1; 
+        let lMonth = (Math.floor(diff / 30) % 12) + 1;
+        if (lDay <= 0) { lDay += 30; lMonth -= 1; }
+        
+        document.getElementById('clock-date').innerText = `DL: ${d}/${m}/${y} - ÂL: ${lDay}/${lMonth}`;
     }
     setInterval(updateClock, 1000); updateClock();
 
@@ -168,9 +177,9 @@
         chat.prepend(div);
 
         const low = d.comment.toLowerCase();
-        if (document.getElementById('botToggle').checked && (low.includes("mấy giờ") || low.includes("ngày âm"))) {
+        if (document.getElementById('botToggle').checked && (low.includes("mấy giờ") || low.includes("ngày âm") || low.includes("âm lịch"))) {
             const now = new Date();
-            let rep = low.includes("mấy giờ") ? `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.` : "Hôm nay là ngày âm lịch Bèo ơi.";
+            let rep = low.includes("mấy giờ") ? `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.` : `Hôm nay là ngày ${document.getElementById('clock-date').innerText.split('ÂL: ')[1]} âm lịch nha.`;
             queue.push(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(rep)}&tl=vi&client=tw-ob`);
         } else {
             if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
