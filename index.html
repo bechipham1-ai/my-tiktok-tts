@@ -94,10 +94,6 @@
                 <div class="sw-item"><span>🎁 TẶNG QUÀ</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
                 <div class="sw-item"><span>🤖 BOT ĐÁP</span><label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
             </div>
-
-            <div style="text-align: center; margin-top: auto; padding: 10px;">
-                <a href="/admin" style="color: var(--primary); text-decoration: none; font-size: 11px; font-weight: 700; border: 1px dashed var(--primary); padding: 5px 12px; border-radius: 8px;">⚙️ QUẢN LÝ DỮ LIỆU</a>
-            </div>
         </div>
     </div>
 
@@ -111,27 +107,18 @@
     const socket = io();
     let queue = [], playing = false, currentSpeed = 1.2;
 
-    // --- 1. ĐỒNG HỒ ---
     function updateClock() {
         const now = new Date();
         document.getElementById('clock-time').innerText = now.toLocaleTimeString('vi-VN');
         const d = now.getDate(), m = now.getMonth() + 1, y = now.getFullYear();
-        // Thuật toán ÂL tương đối cho 2026
         const tet2026 = new Date(2026, 1, 17);
         const diff = Math.floor((now - tet2026) / 86400000);
-        let lDay = (diff % 30) + 1; 
-        let lMonth = (Math.floor(diff / 30) % 12) + 1;
+        let lDay = (diff % 30) + 1; let lMonth = (Math.floor(diff / 30) % 12) + 1;
         if (lDay <= 0) { lDay += 30; lMonth -= 1; }
         document.getElementById('clock-date').innerText = `DL: ${d}/${m}/${y} - ÂL: ${lDay}/${lMonth}`;
     }
     setInterval(updateClock, 1000); updateClock();
 
-    // --- 2. XỬ LÝ SỐ ---
-    function cleanText(text) {
-        return text.replace(/\d{5,}/g, (match) => match.substring(0, 3) + "...");
-    }
-
-    // --- 3. GIỌNG NÓI HỆ THỐNG ---
     async function speakSystem(text) {
         if (!document.getElementById('masterToggle').checked) return;
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`;
@@ -145,7 +132,6 @@
         currentSpeed = parseFloat(v);
     }
 
-    // --- 4. KẾT NỐI & WAKE LOCK ---
     async function start() {
         const u = document.getElementById('user').value.trim();
         if(!u) return;
@@ -165,24 +151,21 @@
             speakSystem("Đã kết nối thành công Bèo ơi");
         } else {
             document.getElementById('stt-icon').innerText = "❌";
-            document.getElementById('stt-text').innerText = "Lỗi hệ thống, thử lại nha";
+            document.getElementById('stt-text').innerText = "Lỗi kết nối rồi";
             sttBox.className = "stt-error";
-            speakSystem("Lỗi rồi Bèo ơi, bấm lại nha");
         }
     });
 
-    // --- 5. NHẮC PK ---
     socket.on('linkMicArmies', () => {
         if (document.getElementById('pkToggle').checked) {
             speakSystem("20 giây cuối thả bông lấy găng Bèo ơi");
         }
     });
 
-    // --- 6. NHẬN DATA VÀ XỬ LÝ ĐỌC ---
     socket.on('audio-data', d => {
         if (!document.getElementById('masterToggle').checked) return;
 
-        // Hiện nhật ký trước (Giữ nguyên cấu trúc của Bèo)
+        // HIỂN THỊ NHẬT KÝ: Giữ nguyên Tên (d.user) và Comment (d.comment) từ Server gửi về
         const chat = document.getElementById('chat');
         const div = document.createElement('div');
         div.className = 'msg';
@@ -190,19 +173,17 @@
         chat.prepend(div);
         if(chat.childNodes.length > 50) chat.removeChild(chat.lastChild);
 
-        // LOGIC TRẢ LỜI NGÀY GIỜ (Nếu bật Bot Đáp)
+        // LOGIC BOT ĐÁP NGÀY GIỜ
         const low = d.comment.toLowerCase();
         if (document.getElementById('botToggle').checked && (low.includes("mấy giờ") || low.includes("ngày âm") || low.includes("âm lịch"))) {
             const now = new Date();
             let rep = low.includes("mấy giờ") ? `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.` : `Hôm nay là ngày ${document.getElementById('clock-date').innerText.split('ÂL: ')[1]} âm lịch nha.`;
-            const botUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(rep)}&tl=vi&client=tw-ob`;
-            queue.push(botUrl);
+            queue.push(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(rep)}&tl=vi&client=tw-ob`);
         } else {
-            // ĐỌC BÌNH THƯỜNG THEO SWITCH CỦA BÈO
+            // ĐỌC THEO LUỒNG AUDIO GỐC
             if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
             if (d.type === 'gift' && !document.getElementById('giftToggle').checked) return;
             if (d.type === 'bot' && !document.getElementById('botToggle').checked) return;
-            
             if (d.audio) queue.push(d.audio);
         }
 
