@@ -1,45 +1,42 @@
-<script>
-    const socket = io();
-    let queue = [], playing = false, currentSpeed = 1.2;
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Bèo Control 🌸</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+</head>
+<body>
+    <div id="chat"></div>
+    <input type="text" id="user" placeholder="ID TikTok...">
+    <button onclick="start()">KẾT NỐI</button>
 
-    // --- TÍNH NĂNG PK 20S (Đã khôi phục) ---
-    socket.on('linkMicArmies', () => {
-        if (document.getElementById('pkToggle').checked) {
-            const audio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent("20 giây cuối thả bông lấy găng Bèo ơi")}&tl=vi&client=tw-ob`);
-            audio.play();
+    <script>
+        const socket = io();
+        let queue = [], playing = false;
+
+        function start() {
+            socket.emit('set-username', document.getElementById('user').value);
         }
-    });
 
-    // --- LOGIC PHÁT AUDIO ---
-    socket.on('audio-data', d => {
-        if (!document.getElementById('masterToggle').checked) return;
-        
-        // Cập nhật giao diện nhật ký
-        const chat = document.getElementById('chat');
-        const div = document.createElement('div');
-        div.className = 'msg';
-        div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
-        chat.prepend(div);
+        socket.on('audio-data', d => {
+            // Hiển thị nhật ký
+            const chat = document.getElementById('chat');
+            chat.innerHTML = `<div><b>${d.user}:</b> ${d.comment}</div>` + chat.innerHTML;
 
-        // Kiểm tra toggle
-        if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
-        if (d.type === 'gift' && !document.getElementById('giftToggle').checked) return;
-        if (d.type === 'bot' && !document.getElementById('botToggle').checked) return;
+            // Xử lý logic đọc âm thanh
+            if (d.audio) {
+                queue.push(d.audio);
+                if (!playing) play();
+            }
+        });
 
-        if (d.audio) {
-            queue.push(d.audio);
-            if(!playing) play();
+        function play() {
+            if (queue.length === 0) { playing = false; return; }
+            playing = true;
+            const a = new Audio(queue.shift());
+            a.onended = () => setTimeout(play, 500);
+            a.play().catch(() => play());
         }
-    });
-
-    function play() {
-        if(!queue.length || !document.getElementById('masterToggle').checked){ playing=false; return; }
-        playing = true;
-        const a = new Audio(queue.shift());
-        a.playbackRate = currentSpeed;
-        a.onended = () => setTimeout(play, 100);
-        a.play().catch(() => play());
-    }
-
-    // Các hàm start(), changeSpeed(), updateClock() giữ nguyên như cũ...
-</script>
+    </script>
+</body>
+</html>
