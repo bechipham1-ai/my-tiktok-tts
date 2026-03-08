@@ -49,12 +49,9 @@
         .msg { padding: 8px 12px; background: var(--bg); border-left: 4px solid var(--primary); border-radius: 8px; margin-bottom: 6px; font-size: 13px; word-break: break-word; }
 
         @media (max-width: 768px) {
-            body { overflow-y: auto; height: auto; }
             .app-container { flex-direction: column; height: auto; }
-            .left-side { width: 100%; border-right: none; height: auto; }
-            .right-side { width: 100%; height: 500px; padding: 10px; }
-            .sw-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-            .sw-item.master { grid-column: span 2; }
+            .left-side { width: 100%; border-right: none; }
+            .right-side { height: 400px; }
         }
     </style>
 </head>
@@ -76,15 +73,15 @@
                 </div>
                 <div id="stt-container">
                     <span id="stt-icon">✨</span>
-                    <span id="stt-text">Hệ thống sẵn sàng</span>
+                    <span id="stt-text">Sẵn sàng</span>
                 </div>
             </div>
 
-            <div class="box-conn" style="padding: 10px;">
-                <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: var(--primary); margin-bottom: 5px;">
+            <div class="box-conn">
+                <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: var(--primary);">
                     <span>TỐC ĐỘ ĐỌC</span><span id="speed-val">1.2x</span>
                 </div>
-                <input type="range" id="speed-range" min="0.5" max="2.0" step="0.1" value="1.2" oninput="changeSpeed(this.value)" style="width: 100%;">
+                <input type="range" min="0.5" max="2.0" step="0.1" value="1.2" oninput="changeSpeed(this.value)">
             </div>
 
             <div class="sw-list">
@@ -93,10 +90,6 @@
                 <div class="sw-item"><span>👋 CHÀO PHÒNG</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
                 <div class="sw-item"><span>🎁 TẶNG QUÀ</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
                 <div class="sw-item"><span>🤖 BOT ĐÁP</span><label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
-            </div>
-
-            <div style="text-align: center; margin-top: auto; padding: 10px;">
-                <a href="/admin" style="color: var(--primary); text-decoration: none; font-size: 11px; font-weight: 700; border: 1px dashed var(--primary); padding: 5px 12px; border-radius: 8px;">⚙️ QUẢN LÝ DỮ LIỆU</a>
             </div>
         </div>
     </div>
@@ -108,112 +101,76 @@
 </div>
 
 <script>
-    const socket = io();
+    const socket = io(); // Kết nối qua thư viện nội bộ
     let queue = [], playing = false, currentSpeed = 1.2;
 
-    // --- 1. ĐỒNG HỒ ---
     function updateClock() {
         const now = new Date();
         document.getElementById('clock-time').innerText = now.toLocaleTimeString('vi-VN');
-        const d = now.getDate(), m = now.getMonth() + 1, y = now.getFullYear();
-        const tet2026 = new Date(2026, 1, 17);
-        const diff = Math.floor((now - tet2026) / 86400000);
-        let lDay = (diff % 30) + 1; 
-        let lMonth = (Math.floor(diff / 30) % 12) + 1;
-        if (lDay <= 0) { lDay += 30; lMonth -= 1; }
-        document.getElementById('clock-date').innerText = `DL: ${d}/${m}/${y} - ÂL: ${lDay}/${lMonth}`;
+        // Thuật toán ÂL đơn giản 2026
+        const tet = new Date(2026, 1, 17);
+        const diff = Math.floor((now - tet) / 86400000);
+        document.getElementById('clock-date').innerText = `ÂL: ${(diff % 30) + 1}/${(Math.floor(diff / 30) % 12) + 1}`;
     }
     setInterval(updateClock, 1000); updateClock();
 
-    function cleanText(text) {
-        return text.replace(/\d{5,}/g, (match) => match.substring(0, 3) + "...");
+    function changeSpeed(v) {
+        currentSpeed = parseFloat(v);
+        document.getElementById('speed-val').innerText = v + "x";
     }
 
     async function speakSystem(text) {
         if (!document.getElementById('masterToggle').checked) return;
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=vi&client=tw-ob`;
-        const audio = new Audio(url);
-        audio.playbackRate = currentSpeed;
-        audio.play().catch(() => {});
+        queue.push(url);
+        if (!playing) play();
     }
 
-    function changeSpeed(v) {
-        document.getElementById('speed-val').innerText = v + "x";
-        currentSpeed = parseFloat(v);
-    }
-
-    async function start() {
+    function start() {
         const u = document.getElementById('user').value.trim();
         if(!u) return;
-        document.getElementById('stt-icon').innerText = "⏳";
-        document.getElementById('stt-text').innerText = "Đang kết nối...";
-        if ('wakeLock' in navigator) await navigator.wakeLock.request('screen').catch(()=>{});
         socket.emit('set-username', u);
+        document.getElementById('stt-text').innerText = "Đang kết nối...";
     }
 
     socket.on('status', m => {
-        const sttBox = document.getElementById('stt-container');
-        const u = document.getElementById('user').value.trim();
-        if(m.includes('✅')) {
-            document.getElementById('stt-icon').innerText = "✅";
-            document.getElementById('stt-text').innerText = `Kết nối thành công: ${u}`;
-            sttBox.className = "stt-success";
-            speakSystem("Đã kết nối thành công Bèo ơi");
-        } else {
-            document.getElementById('stt-icon').innerText = "❌";
-            document.getElementById('stt-text').innerText = "Lỗi hệ thống, thử lại nha";
-            sttBox.className = "stt-error";
-            speakSystem("Lỗi rồi Bèo ơi, bấm lại nha");
-        }
+        const stt = document.getElementById('stt-container');
+        document.getElementById('stt-text').innerText = m;
+        stt.className = m.includes('✅') ? "stt-success" : "stt-error";
+        if(m.includes('✅')) speakSystem("Hệ thống đã sẵn sàng Bèo ơi");
     });
 
-    // --- 5. NHẮC PK 20S (FIXED) ---
-    const triggerPKAlert = () => {
+    // --- FIX NHẮC PK ---
+    socket.on('linkMicArmies', () => {
         if (document.getElementById('pkToggle').checked) {
             speakSystem("20 giây cuối lên bông bèo ơi");
         }
-    };
+    });
 
-    // Lắng nghe tín hiệu trực tiếp từ server
-    socket.on('linkMicArmies', triggerPKAlert);
-    socket.on('match', triggerPKAlert);
-
-    // --- 6. NHẬN DATA VÀ XỬ LÝ ĐỌC ---
     socket.on('audio-data', d => {
         if (!document.getElementById('masterToggle').checked) return;
-
+        
+        // Hiện nhật ký
         const chat = document.getElementById('chat');
         const div = document.createElement('div');
         div.className = 'msg';
         div.innerHTML = `<b>${d.user}:</b> ${d.comment}`;
         chat.prepend(div);
-        if(chat.childNodes.length > 50) chat.removeChild(chat.lastChild);
 
-        const low = d.comment.toLowerCase();
-        
-        // Chống spam: Nếu comment chỉ toàn icon hoặc quá ngắn thì bỏ qua không đọc
-        if (low.length < 2) return;
-
-        if (document.getElementById('botToggle').checked && (low.includes("mấy giờ") || low.includes("ngày âm") || low.includes("âm lịch"))) {
-            const now = new Date();
-            let rep = low.includes("mấy giờ") ? `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.` : `Hôm nay là ngày ${document.getElementById('clock-date').innerText.split('ÂL: ')[1]} âm lịch nha.`;
-            queue.push(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(rep)}&tl=vi&client=tw-ob`);
-        } else {
-            if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
-            if (d.type === 'gift' && !document.getElementById('giftToggle').checked) return;
-            if (d.audio) queue.push(d.audio);
+        // Xử lý đọc
+        if (d.audio) {
+            queue.push(d.audio);
+            if (!playing) play();
         }
-
-        if(!playing) play();
     });
 
     function play() {
-        if(!queue.length || !document.getElementById('masterToggle').checked){ playing=false; return; }
+        if (!queue.length) { playing = false; return; }
         playing = true;
-        const a = new Audio(queue.shift());
-        a.playbackRate = currentSpeed;
-        a.onended = () => setTimeout(play, 100);
-        a.play().catch(() => play());
+        const audio = new Audio(queue.shift());
+        audio.playbackRate = currentSpeed;
+        audio.onended = () => setTimeout(play, 100);
+        audio.play().catch(() => play());
     }
 </script>
 </body>
