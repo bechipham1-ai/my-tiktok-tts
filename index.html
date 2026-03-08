@@ -111,6 +111,7 @@
     const socket = io();
     let queue = [], playing = false, currentSpeed = 1.2;
 
+    // --- 1. ĐỒNG HỒ ---
     function updateClock() {
         const now = new Date();
         document.getElementById('clock-time').innerText = now.toLocaleTimeString('vi-VN');
@@ -166,16 +167,18 @@
         }
     });
 
-    // --- FIX NHẮC PK ---
-    // Bắt cả 2 loại sự kiện phổ biến nhất từ server
-    const handlePKAlert = () => {
+    // --- 5. NHẮC PK 20S (FIXED) ---
+    const triggerPKAlert = () => {
         if (document.getElementById('pkToggle').checked) {
             speakSystem("20 giây cuối lên bông bèo ơi");
         }
     };
-    socket.on('linkMicArmies', handlePKAlert);
-    socket.on('match', handlePKAlert); // Dự phòng nếu server gửi sự kiện match
 
+    // Lắng nghe tín hiệu trực tiếp từ server
+    socket.on('linkMicArmies', triggerPKAlert);
+    socket.on('match', triggerPKAlert);
+
+    // --- 6. NHẬN DATA VÀ XỬ LÝ ĐỌC ---
     socket.on('audio-data', d => {
         if (!document.getElementById('masterToggle').checked) return;
 
@@ -187,6 +190,10 @@
         if(chat.childNodes.length > 50) chat.removeChild(chat.lastChild);
 
         const low = d.comment.toLowerCase();
+        
+        // Chống spam: Nếu comment chỉ toàn icon hoặc quá ngắn thì bỏ qua không đọc
+        if (low.length < 2) return;
+
         if (document.getElementById('botToggle').checked && (low.includes("mấy giờ") || low.includes("ngày âm") || low.includes("âm lịch"))) {
             const now = new Date();
             let rep = low.includes("mấy giờ") ? `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.` : `Hôm nay là ngày ${document.getElementById('clock-date').innerText.split('ÂL: ')[1]} âm lịch nha.`;
